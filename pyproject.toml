@@ -3,9 +3,11 @@ name = "tetris-project"
 version = "0.1.0"
 description = "Add your description here"
 authors = [
-    { name = "Sor4chi", email = "80559385+sor4chi@users.noreply.github.com" }
+    { name = "Sor4chi", email = "80559385+sor4chi@users.noreply.github.com" },
 ]
-dependencies = []
+dependencies = [
+    "numpy>=1.26.4",
+]
 readme = "README.md"
 requires-python = ">= 3.8"
 
@@ -18,10 +20,12 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = []
+dev-dependencies = [
+    "pytest>=8.1.1",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/tetris_project"]
+packages = ["src/tetris_project", "src/tetris_gym", "src/tests"]

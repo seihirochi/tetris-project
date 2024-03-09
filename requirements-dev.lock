@@ -8,3 +8,12 @@
 #   with-sources: false
 
 -e file:.
+iniconfig==2.0.0
+    # via pytest
+numpy==1.26.4
+    # via tetris-project
+packaging==23.2
+    # via pytest
+pluggy==1.4.0
+    # via pytest
+pytest==8.1.1
