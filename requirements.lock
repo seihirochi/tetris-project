@@ -8,5 +8,7 @@
 #   with-sources: false
 
 -e file:.
+keyboard==0.13.5
+    # via tetris-project
 numpy==1.26.4
     # via tetris-project

@@ -1,13 +1,12 @@
 import numpy as np
 
-from tetris_gym import Mino, TetrisBoard
+from tetris_gym import Tetris
 
-from .config import mino_I, mino_T, ordinary_tetris_minos
+from .config import ordinary_tetris_minos
 
 
 def start():
-    board = TetrisBoard(20, 10, ordinary_tetris_minos)
-    board.set_mino(mino_I.id, (3, 3))
-    board.set_mino(mino_T.id, (6, 5))
-
-    print(board.render())
+    game = Tetris(20, 10, ordinary_tetris_minos)
+    while game.game_over is False:
+        game.step()
+        print(game.render())
