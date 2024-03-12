@@ -1,6 +1,6 @@
 import numpy as np
 
-from tetris_gym import Mino, MinoState, TetrisBoard
+from tetris_gym import Mino, MinoState, Tetris, TetrisBoard
 
 
 def test_board_creation():
@@ -41,41 +41,14 @@ def test_set_mino():
     assert board.board[6][6] == 2
 
 
-# def test_render_empty_board():
-#     board = TetrisBoard(20, 10, {})
-#     expected = """############
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# #          #
-# ############
-# """
-#     assert board.render() == expected
-
-
 def test_render_with_mino():
     mino_I = Mino(1,np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]),"I",)
-    board = TetrisBoard(20, 10, {mino_I})
 
-    mino_I_state = MinoState(mino_I, 20, 10, (3, 3))
+    game = Tetris(20, 10, {mino_I})
+    game.current_mino_state = MinoState(mino_I, 20, 10, (3, 3))
+    game.board = TetrisBoard(20, 10, {mino_I})
     
-    print(board.render(mino_I_state))
+    print(game.render())
     expected = """############
 #          #
 #          #
@@ -99,4 +72,4 @@ def test_render_with_mino():
 #          #
 ############
 """
-    assert board.render(mino_I_state) == expected
+    assert game.render() == expected

@@ -10,3 +10,4 @@ def start():
     while game.game_over is False:
         game.step()
         print(game.render())
+    
