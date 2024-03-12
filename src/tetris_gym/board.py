@@ -22,12 +22,13 @@ class TetrisBoard:
     def set_mino_id(self, pos: tuple, mino_id: int) -> None:
         if pos[0] < 0 or pos[0] >= self.height or pos[1] < 0 or pos[1] >= self.width:
             raise ValueError(f"Invalid position: {pos}")
-        if mino_id not in self.mino_id_map:
+        if mino_id not in self.mino_id_map and mino_id != 0:
+            # 0 is a void, so it's always valid
             raise ValueError(f"Invalid mino_id: {mino_id}")
 
         self.board[pos] = mino_id
 
-    def set_mino(self, mino_id: str, pos: tuple) -> None:
+    def set_mino(self, mino_id: int, pos: tuple) -> None:
         if pos[0] < 0 or pos[0] >= self.height or pos[1] < 0 or pos[1] >= self.width:
             raise ValueError(f"Invalid position: {pos}")
         if mino_id not in self.mino_id_map:
@@ -39,6 +40,19 @@ class TetrisBoard:
             for j in range(mino_shape.shape[1]):
                 if mino_shape[i][j] == 1:
                     self.set_mino_id((pos[0] + i, pos[1] + j), mino.id)
+
+    def remove_mino(self, mino_id: int, pos: tuple) -> None:
+        if pos[0] < 0 or pos[0] >= self.height or pos[1] < 0 or pos[1] >= self.width:
+            raise ValueError(f"Invalid position: {pos}")
+        if mino_id not in self.mino_id_map:
+            raise ValueError(f"Invalid mino_id: {mino_id}")
+
+        mino = self.mino_id_map[mino_id]
+        mino_shape = mino.shape
+        for i in range(mino_shape.shape[0]):
+            for j in range(mino_shape.shape[1]):
+                if mino_shape[i][j] == 1:
+                    self.set_mino_id((pos[0] + i, pos[1] + j), 0)
 
     def render(self) -> str:
         s = ""

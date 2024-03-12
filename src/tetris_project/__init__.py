@@ -1,13 +1,17 @@
 import numpy as np
 
-from tetris_gym import Mino, TetrisBoard
+from tetris_gym import Tetris
 
 from .config import mino_I, mino_T, ordinary_tetris_minos
+# import keyboard
+import time
+
+TICK = 0.1
 
 
 def start():
-    board = TetrisBoard(20, 10, ordinary_tetris_minos)
-    board.set_mino(mino_I.id, (3, 3))
-    board.set_mino(mino_T.id, (6, 5))
-
-    print(board.render())
+    game = Tetris(20, 10, ordinary_tetris_minos)
+    while True:
+        game.step(0)
+        print(game.render())
+        time.sleep(TICK)
