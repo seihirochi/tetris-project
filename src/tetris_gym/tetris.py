@@ -4,8 +4,9 @@ from .board import TetrisBoard
 from .mino import Mino
 from .mino_state import MinoState
 
-EDGE_CHAR = "#"
-VOID_CHAR = " "
+EDGE_CHAR = "＃"
+VOID_CHAR = "　"
+
 
 class Tetris:
     def __init__(self, height: int, width: int, minos: set[Mino]) -> None:
@@ -38,17 +39,16 @@ class Tetris:
 
         return mino_state.origin == self.current_mino_state.origin
 
-    def step(self) -> None:
-        command = input()
-        if command == "s":
+    def step(self, action: str) -> None:
+        if action == "s":
             self.current_mino_state.move(1, 0, self.board.board)
-        elif command == "a":
+        elif action == "a":
             self.current_mino_state.move(0, -1, self.board.board)
-        elif command == "d":
+        elif action == "d":
             self.current_mino_state.move(0, 1, self.board.board)
-        elif command == "z":
+        elif action == "z":
             self.current_mino_state.rotate_left(self.board.board)
-        elif command == "x":
+        elif action == "x":
             self.current_mino_state.rotate_right(self.board.board)
 
         # ミノが着地したらボードに固定
@@ -59,7 +59,13 @@ class Tetris:
             # ゲームオーバー判定
             for i in range(self.current_mino_state.mino.shape.shape[0]):
                 for j in range(self.current_mino_state.mino.shape.shape[1]):
-                    if self.current_mino_state.mino.shape[i][j] == 1 and self.board.board[self.current_mino_state.origin[0] + i][self.current_mino_state.origin[1] + j] != 0:
+                    if (
+                        self.current_mino_state.mino.shape[i][j] == 1
+                        and self.board.board[self.current_mino_state.origin[0] + i][
+                            self.current_mino_state.origin[1] + j
+                        ]
+                        != 0
+                    ):
                         self.game_over = True
                         return
 
@@ -74,7 +80,11 @@ class Tetris:
 
                 if self.board.board[i][j] in self.board.mino_id_map:
                     s += self.board.mino_id_map[self.board.board[i][j]].char
-                elif 0 <= mino_x < self.current_mino_state.mino.shape.shape[0] and 0 <= mino_y < self.current_mino_state.mino.shape.shape[1] and self.current_mino_state.mino.shape[mino_x][mino_y] == 1:
+                elif (
+                    0 <= mino_x < self.current_mino_state.mino.shape.shape[0]
+                    and 0 <= mino_y < self.current_mino_state.mino.shape.shape[1]
+                    and self.current_mino_state.mino.shape[mino_x][mino_y] == 1
+                ):
                     s += self.current_mino_state.mino.char
                 else:
                     s += VOID_CHAR

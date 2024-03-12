@@ -10,3 +10,24 @@
 -e file:.
 numpy==1.26.4
     # via tetris-project
+pynput==1.7.6
+    # via tetris-project
+pyobjc-core==10.1
+    # via pyobjc-framework-applicationservices
+    # via pyobjc-framework-cocoa
+    # via pyobjc-framework-coretext
+    # via pyobjc-framework-quartz
+pyobjc-framework-applicationservices==10.1
+    # via pynput
+pyobjc-framework-cocoa==10.1
+    # via pyobjc-framework-applicationservices
+    # via pyobjc-framework-coretext
+    # via pyobjc-framework-quartz
+pyobjc-framework-coretext==10.1
+    # via pyobjc-framework-applicationservices
+pyobjc-framework-quartz==10.1
+    # via pynput
+    # via pyobjc-framework-applicationservices
+    # via pyobjc-framework-coretext
+six==1.16.0
+    # via pynput
