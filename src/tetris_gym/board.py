@@ -1,9 +1,7 @@
 import numpy as np
 
 from .mino import Mino
-
-EDGE_CHAR = "#"
-VOID_CHAR = " "
+from .mino_state import MinoState
 
 
 class TetrisBoard:
@@ -27,29 +25,9 @@ class TetrisBoard:
 
         self.board[pos] = mino_id
 
-    def set_mino(self, mino_id: str, pos: tuple) -> None:
-        if pos[0] < 0 or pos[0] >= self.height or pos[1] < 0 or pos[1] >= self.width:
-            raise ValueError(f"Invalid position: {pos}")
-        if mino_id not in self.mino_id_map:
-            raise ValueError(f"Invalid mino_id: {mino_id}")
+    def set_mino(self, state: MinoState) -> None:
+        for i in range(state.mino.shape.shape[0]):
+            for j in range(state.mino.shape.shape[1]):
+                if state.mino.shape[i][j] == 1:
+                    self.set_mino_id((state.origin[0] + i, state.origin[1] + j), state.mino.id)
 
-        mino = self.mino_id_map[mino_id]
-        mino_shape = mino.shape
-        for i in range(mino_shape.shape[0]):
-            for j in range(mino_shape.shape[1]):
-                if mino_shape[i][j] == 1:
-                    self.set_mino_id((pos[0] + i, pos[1] + j), mino.id)
-
-    def render(self) -> str:
-        s = ""
-        s += EDGE_CHAR * (self.width + 2) + "\n"
-        for i in range(self.height):
-            s += EDGE_CHAR
-            for j in range(self.width):
-                if self.board[i][j] in self.mino_id_map:
-                    s += self.mino_id_map[self.board[i][j]].char
-                else:
-                    s += VOID_CHAR
-            s += EDGE_CHAR + "\n"
-        s += EDGE_CHAR * (self.width + 2) + "\n"
-        return s

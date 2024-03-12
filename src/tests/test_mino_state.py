@@ -18,7 +18,7 @@ mock_mino_shape_2 = np.array([
 
 class TestMinoState:
     def test_mino_rotate_left(self):
-        mino = Mino(1, mock_mino_shape, (0, 0), "J")
+        mino = Mino(1, mock_mino_shape, "J")
         mino_state = MinoState(mino, 20, 10, (0, 0))
         field = TetrisBoard(20, 10, {mino})
 
@@ -32,7 +32,7 @@ class TestMinoState:
         assert np.array_equal(mino.shape, np.array([[0, 1, 0], [0, 1, 0], [1, 1, 0]]))
 
     def test_mino_rotate_right(self):
-        mino = Mino(1, mock_mino_shape, (0, 0), "J")
+        mino = Mino(1, mock_mino_shape, "J")
         mino_state = MinoState(mino, 20, 10, (0, 0))
         field = TetrisBoard(20, 10, {mino})
 
@@ -46,7 +46,7 @@ class TestMinoState:
         assert np.array_equal(mino.shape, np.array([[0, 1, 0], [0, 1, 0], [1, 1, 0]]))
 
     def test_mino_move(self):
-        mino = Mino(1, mock_mino_shape, (0, 0), "J")
+        mino = Mino(1, mock_mino_shape, "J")
         mino_state = MinoState(mino, 20, 10, (0, 0))
         field = TetrisBoard(20, 10, {mino})
 
@@ -60,7 +60,7 @@ class TestMinoState:
         assert mino_state.origin == (0, 0)
 
     def test_mino_is_invalid(self):
-        mino = Mino(1, mock_mino_shape, (0, 0), "J")
+        mino = Mino(1, mock_mino_shape, "J")
         mino_state = MinoState(mino, 20, 10, (0, 0))
         field = TetrisBoard(20, 10, {mino})
 
