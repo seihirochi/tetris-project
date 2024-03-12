@@ -16,4 +16,25 @@ packaging==23.2
     # via pytest
 pluggy==1.4.0
     # via pytest
+pynput==1.7.6
+    # via tetris-project
+pyobjc-core==10.1
+    # via pyobjc-framework-applicationservices
+    # via pyobjc-framework-cocoa
+    # via pyobjc-framework-coretext
+    # via pyobjc-framework-quartz
+pyobjc-framework-applicationservices==10.1
+    # via pynput
+pyobjc-framework-cocoa==10.1
+    # via pyobjc-framework-applicationservices
+    # via pyobjc-framework-coretext
+    # via pyobjc-framework-quartz
+pyobjc-framework-coretext==10.1
+    # via pyobjc-framework-applicationservices
+pyobjc-framework-quartz==10.1
+    # via pynput
+    # via pyobjc-framework-applicationservices
+    # via pyobjc-framework-coretext
 pytest==8.1.1
+six==1.16.0
+    # via pynput
