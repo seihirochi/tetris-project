@@ -10,8 +10,6 @@
 -e file:.
 iniconfig==2.0.0
     # via pytest
-keyboard==0.13.5
-    # via tetris-project
 numpy==1.26.4
     # via tetris-project
 packaging==23.2
