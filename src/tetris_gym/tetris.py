@@ -4,8 +4,10 @@ from .board import TetrisBoard
 from .mino import Mino
 from .mino_state import MinoState
 
-EDGE_CHAR = "＃"
-VOID_CHAR = "　"
+# EDGE_CHAR = "＃"
+# VOID_CHAR = "　"
+EDGE_CHAR = "\033[1;30;47m  \033[0m"
+VOID_CHAR = "  "
 
 
 class Tetris:
