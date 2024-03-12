@@ -1,1 +1,2 @@
-from .env import *
+from .board import *
+from .mino import *
