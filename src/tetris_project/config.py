@@ -97,51 +97,51 @@
 # }
 
 import numpy as np
+from colr import color
 
 from tetris_gym import Mino
 
 mino_I = Mino(
     1,
     np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]),
-    "I",
+    color("　", back="cyan"),
 )
 
 mino_J = Mino(
     2,
     np.array([[0, 1, 1], [0, 1, 0], [0, 1, 0]]),
-    "J",
+    color("　", back="blue"),
 )
 
 mino_L = Mino(
     3,
     np.array([[0, 1, 0], [0, 1, 0], [0, 1, 1]]),
-    "L",
+    color("　", back="orange"),
 )
 
 mino_O = Mino(
     4,
     np.array([[1, 1], [1, 1]]),
-    "O",
+    color("　", back="yellow"),
 )
 
 mino_S = Mino(
     5,
     np.array([[0, 1, 0], [0, 1, 1], [0, 0, 1]]),
-    "S",
+    color("　", back="green"),
 )
 
 mino_T = Mino(
     6,
     np.array([[0, 1, 0], [0, 1, 1], [0, 1, 0]]),
-    "T",
+    color("　", back="magenta"),
 )
 
 mino_Z = Mino(
     7,
     np.array([[0, 0, 1], [0, 1, 1], [0, 1, 0]]),
-    "Z",
+    color("　", back="red"),
 )
-
 
 ordinary_tetris_minos = {
     mino_I,

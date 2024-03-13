@@ -8,5 +8,7 @@
 #   with-sources: false
 
 -e file:.
+colr==0.9.1
+    # via tetris-project
 numpy==1.26.4
     # via tetris-project
