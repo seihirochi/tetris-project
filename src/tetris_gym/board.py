@@ -31,7 +31,8 @@ class TetrisBoard:
                 if state.mino.shape[i][j] == 1:
                     self.set_mino_id((state.origin[0] + i, state.origin[1] + j), state.mino.id)
 
-    def clear_lines(self) -> None:
+    def clear_lines(self) -> int:
+        clear_count = 0
         for i in range(self.height):
             # i 行目全てに mino があれば消す
             mino_exists = 0
@@ -40,8 +41,10 @@ class TetrisBoard:
                     continue
                 mino_exists += 1
             if mino_exists == self.width:
+                clear_count += 1
                 # 今の行より上の行を全て 1 行下にずらす
                 for k in range(i, 0, -1):
                     self.board[k] = self.board[k - 1]
                 # 一番上は空行
                 self.board[0] = np.zeros(self.width)
+        return clear_count
