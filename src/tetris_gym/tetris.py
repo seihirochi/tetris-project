@@ -18,7 +18,7 @@ class Tetris:
     def __init__(self, height: int, width: int, minos: set[Mino]) -> None:
         self.board = TetrisBoard(height, width, minos)
         self.mino_permutation = deque()
-        self.all_mino = minos # 全種類の mino
+        self.minos = minos # 全種類の mino
 
         self.hold_mino = None  # hold している mino
         self.hold_used = False # 今のターンに hold したか否か
@@ -27,7 +27,7 @@ class Tetris:
         self.score = 0
 
         # 順列をランダムに shuffle して保持
-        add_permutation = list(self.all_mino)
+        add_permutation = list(self.minos)
         random.shuffle(add_permutation)
         for mino in add_permutation:
             self.mino_permutation.append(mino)
@@ -42,7 +42,7 @@ class Tetris:
 
         # len(permutation) < 7 で新しい permutation を puh_back
         if len(self.mino_permutation) < 7:
-            add_permutation = copy.deepcopy(list(self.all_mino))
+            add_permutation = copy.deepcopy(list(self.minos))
             random.shuffle(add_permutation)
             for mino in add_permutation:
                 self.mino_permutation.append(mino)
@@ -190,9 +190,9 @@ class Tetris:
             now_line += 1
 
         # 画面下部にスコアとライン数を表示
-        s = VOID_CHAR + "Score" + VOID_CHAR + "Line" + VOID_CHAR*4
+        s = VOID_CHAR + "Score " + VOID_CHAR + "Line" + VOID_CHAR*11
         all_fields.append(s)
-        s = VOID_CHAR + f"{self.score:0>5}" + VOID_CHAR + f"{self.line_total_count:0>5}" + VOID_CHAR*4
+        s = VOID_CHAR + f"{self.score:0>6}" + VOID_CHAR + f"{self.line_total_count:0>6}" + VOID_CHAR*10
         all_fields.append(s)
 
         # 下部を見やすくするようの空行
