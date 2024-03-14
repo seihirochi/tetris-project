@@ -26,20 +26,12 @@ class Tetris:
         self.line_total_count = 0
         self.score = 0
 
-        # 順列をランダムに shuffle して保持
-        add_permutation = list(self.minos)
-        random.shuffle(add_permutation)
-        for mino in add_permutation:
-            self.mino_permutation.append(mino)
-
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
 
 
     def _generate_mino_state(self) -> MinoState:
-        selected_mino = self.mino_permutation.popleft()
-
         # len(permutation) < 7 で新しい permutation を puh_back
         if len(self.mino_permutation) < 7:
             add_permutation = copy.deepcopy(list(self.minos))
@@ -47,20 +39,13 @@ class Tetris:
             for mino in add_permutation:
                 self.mino_permutation.append(mino)
         
+        selected_mino = self.mino_permutation.popleft()
         return MinoState(
             mino=selected_mino,
             height=self.board.height,
             width=self.board.width,
             origin=(0, self.board.width // 2 - selected_mino.shape.shape[1] // 2),
         )
-
-
-    def is_mino_landed(self) -> bool:
-        # mino_state を下にずらして origin が変わるか否かで判定
-        # state をコピーして使う
-        mino_state = copy.deepcopy(self.current_mino_state)
-        mino_state.move(1, 0, self.board.board)
-        return mino_state.origin == self.current_mino_state.origin
 
 
     def hold(self) -> None:
@@ -94,8 +79,9 @@ class Tetris:
         # ゲームオーバー判定
         for i in range(self.current_mino_state.mino.shape.shape[0]):
             for j in range(self.current_mino_state.mino.shape.shape[1]):
-                if self.current_mino_state.mino.shape[i][j] == 1 and self.board.board[self.current_mino_state.origin[0] + i][self.current_mino_state.origin[1] + j] != 0:
+                if self.current_mino_state.mino.shape[i][j] == 1 and self.board.board[self.current_mino_state.origin + tuple([i, j])] != 0:
                     self.game_over = True
+                    return
 
 
     def step(self, action: int) -> None:
@@ -104,10 +90,10 @@ class Tetris:
         elif action == 1:  # move right
             self.current_mino_state.move(0, 1, self.board.board)
         elif action == 2:  # move down
-            if self.is_mino_landed():
-                self.place()  # place process
-            else:
-                self.current_mino_state.move(1, 0, self.board.board)
+            prev_origin = self.current_mino_state.origin
+            self.current_mino_state.move(1, 0, self.board.board)
+            if self.current_mino_state.origin == prev_origin:
+                self.place()
         elif action == 3:  # rotate left
             self.current_mino_state.rotate_left(self.board.board)
         elif action == 4:  # rotate right
@@ -115,7 +101,9 @@ class Tetris:
         elif action == 5:  # hold
             self.hold()
         elif action == 6:  # hard drop
-            while not self.is_mino_landed():
+            prev_origin = None
+            while self.current_mino_state.origin != prev_origin:
+                prev_origin = self.current_mino_state.origin
                 self.current_mino_state.move(1, 0, self.board.board)
             self.place()
 
