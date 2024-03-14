@@ -2,11 +2,13 @@ import copy
 import random
 from collections import deque
 
+from colr import color
+
 from .board import TetrisBoard
 from .mino import Mino
 from .mino_state import MinoState
 
-EDGE_CHAR = "\033[48;5;255m　\x1b[0m"
+EDGE_CHAR = color("　", back="white")
 VOID_CHAR = "　"
 
 WALL_WIDTH = 1
@@ -30,7 +32,6 @@ class Tetris:
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
 
-
     def _generate_mino_state(self) -> MinoState:
         # len(permutation) < 7 で新しい permutation を puh_back
         if len(self.mino_permutation) < 7:
@@ -47,12 +48,11 @@ class Tetris:
             origin=(0, self.board.width // 2 - selected_mino.shape.shape[1] // 2),
         )
 
-
-    def hold(self) -> None:
+    def _hold(self) -> None:
         # 現ターンで hold している場合は何もしない
         if self.hold_used:
             return
-        
+            
         self.hold_used = True
         if self.hold_mino is None:
             self.hold_mino = self.current_mino_state.mino
@@ -65,8 +65,7 @@ class Tetris:
                 origin=(0, self.board.width // 2 - self.hold_mino.shape.shape[1] // 2),
             ), self.current_mino_state.mino
 
-
-    def place(self) -> None:
+    def _place(self) -> None:
         self.hold_used = False # hold 状況をリセット
         self.board.set_mino(self.current_mino_state) # ミノをボードに固定
 
@@ -79,10 +78,32 @@ class Tetris:
         # ゲームオーバー判定
         for i in range(self.current_mino_state.mino.shape.shape[0]):
             for j in range(self.current_mino_state.mino.shape.shape[1]):
-                if self.current_mino_state.mino.shape[i][j] == 1 and self.board.board[self.current_mino_state.origin + tuple([i, j])] != 0:
+                [x, y] = self.current_mino_state.origin
+                if self.current_mino_state.mino.shape[i][j] == 1 and self.board.board[x + i][y + j] != 0:
                     self.game_over = True
                     return
 
+    def get_observation(self) -> dict:
+        return {
+            'board': self.board.board,
+            'mino_origin': self.current_mino_state.origin,
+            'mino_shape': self.current_mino_state.mino.shape
+        }
+
+    def get_reward(self) -> int:
+        # 現時点では reward はゲームスコアのみ
+        return self.score
+
+    def reset(self) -> None:
+        self.board.reset()
+        self.mino_permutation.clear()
+        self.current_mino_state = self._generate_mino_state()
+        self.hold_mino = None
+        self.hold_used = False
+        self.line_total_count = 0
+        self.score = 0
+        self.game_over = False
+        return
 
     def step(self, action: int) -> None:
         if action == 0:  # move left
@@ -93,20 +114,19 @@ class Tetris:
             prev_origin = self.current_mino_state.origin
             self.current_mino_state.move(1, 0, self.board.board)
             if self.current_mino_state.origin == prev_origin:
-                self.place()
+                self._place()
         elif action == 3:  # rotate left
             self.current_mino_state.rotate_left(self.board.board)
         elif action == 4:  # rotate right
             self.current_mino_state.rotate_right(self.board.board)
         elif action == 5:  # hold
-            self.hold()
+            self._hold()
         elif action == 6:  # hard drop
             prev_origin = None
             while self.current_mino_state.origin != prev_origin:
                 prev_origin = self.current_mino_state.origin
                 self.current_mino_state.move(1, 0, self.board.board)
-            self.place()
-
+            self._place()
 
     def render(self) -> str:
         all_fields = []
@@ -186,7 +206,7 @@ class Tetris:
         all_fields.append(s)
 
         # 下部を見やすくするようの空行
-        s = VOID_CHAR * (self.board.width + 2*WALL_WIDTH)
+        s = VOID_CHAR * (self.board.width + 2*WALL_WIDTH + NEXT_MINO_LIST_WIDTH)
         all_fields.append(s)
             
         s = ""

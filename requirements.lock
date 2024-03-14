@@ -8,7 +8,16 @@
 #   with-sources: false
 
 -e file:.
+cloudpickle==3.0.0
+    # via gymnasium
 colr==0.9.1
     # via tetris-project
-numpy==1.26.4
+farama-notifications==0.0.4
+    # via gymnasium
+gymnasium==0.29.1
     # via tetris-project
+numpy==1.26.4
+    # via gymnasium
+    # via tetris-project
+typing-extensions==4.10.0
+    # via gymnasium

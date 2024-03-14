@@ -29,5 +29,3 @@ def start():
     
     # Game Over
     overwrite_print(game.render(), 0)
-    # print(game.render())
-    

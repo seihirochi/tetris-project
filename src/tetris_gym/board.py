@@ -17,6 +17,9 @@ class TetrisBoard:
         self.minos = minos
         self.mino_id_map = {mino.id: mino for mino in minos}
 
+    def reset(self) -> None:
+        self.board = np.zeros((self.height, self.width))
+
     def set_mino_id(self, pos: tuple, mino_id: int) -> None:
         if pos[0] < 0 or pos[0] >= self.height or pos[1] < 0 or pos[1] >= self.width:
             raise ValueError(f"Invalid position: {pos}")

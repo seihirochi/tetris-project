@@ -8,14 +8,23 @@
 #   with-sources: false
 
 -e file:.
+cloudpickle==3.0.0
+    # via gymnasium
 colr==0.9.1
+    # via tetris-project
+farama-notifications==0.0.4
+    # via gymnasium
+gymnasium==0.29.1
     # via tetris-project
 iniconfig==2.0.0
     # via pytest
 numpy==1.26.4
+    # via gymnasium
     # via tetris-project
 packaging==23.2
     # via pytest
 pluggy==1.4.0
     # via pytest
 pytest==8.1.1
+typing-extensions==4.10.0
+    # via gymnasium
