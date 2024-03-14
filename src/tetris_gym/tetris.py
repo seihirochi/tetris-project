@@ -64,6 +64,10 @@ class Tetris:
 
 
     def hold(self) -> None:
+        # 現ターンで hold している場合は何もしない
+        if self.hold_used:
+            return
+        
         self.hold_used = True
         if self.hold_mino is None:
             self.hold_mino = self.current_mino_state.mino
@@ -94,25 +98,23 @@ class Tetris:
                     self.game_over = True
 
 
-    def step(self) -> None:
-        command = input()
-        if command == "a": # move left
+    def step(self, action: int) -> None:
+        if action == 0:  # move left
             self.current_mino_state.move(0, -1, self.board.board)
-        elif command == "d": # move right
+        elif action == 1:  # move right
             self.current_mino_state.move(0, 1, self.board.board)
-        elif command == "s": # move down
+        elif action == 2:  # move down
             if self.is_mino_landed():
-                self.place() # place process
+                self.place()  # place process
             else:
                 self.current_mino_state.move(1, 0, self.board.board)
-        elif command == "z": # rotate left
+        elif action == 3:  # rotate left
             self.current_mino_state.rotate_left(self.board.board)
-        elif command == "x": # rotate right
+        elif action == 4:  # rotate right
             self.current_mino_state.rotate_right(self.board.board)
-        elif command == "q": # hold
-            if self.hold_used is False:
-                self.hold()
-        elif command == "w": # hard drop
+        elif action == 5:  # hold
+            self.hold()
+        elif action == 6:  # hard drop
             while not self.is_mino_landed():
                 self.current_mino_state.move(1, 0, self.board.board)
             self.place()
