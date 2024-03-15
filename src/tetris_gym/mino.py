@@ -4,7 +4,7 @@ import numpy as np
 class Mino:
     def __init__(self, id: int, shape: np.array, char: str = "▪︎"):
         # === validation ===
-        if id <= 0:
+        if id < 0:
             raise ValueError("id must be positive")
         if shape.shape[0] != shape.shape[1]:
             raise ValueError("Shape must be square")
@@ -26,3 +26,6 @@ class Mino:
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+    def to_tensor(self) -> np.ndarray:
+        return np.array([self.id])
