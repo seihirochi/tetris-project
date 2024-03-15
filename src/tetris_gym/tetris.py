@@ -16,6 +16,35 @@ NEXT_MINO_LIST_WIDTH = 6
 LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
 
 
+class TetrisState:
+    def __init__(
+        self,
+        board: TetrisBoard,
+        mino_state: MinoState,
+        hold_mino: Mino,
+        next_minos: list[Mino],
+        score: int,
+        line_total_count: int,
+    ) -> None:
+        self.board = board
+        self.mino_state = mino_state
+        self.hold_mino = hold_mino
+        self.next_minos = next_minos
+        self.score = score
+        self.line_total_count = line_total_count
+
+    def to_tensor(self) -> tuple:
+        return (
+            self.board.to_tensor(),
+            self.mino_state.mino.to_tensor(),
+            self.mino_state.origin,
+            self.hold_mino.to_tensor() if self.hold_mino is not None else None,
+            [mino.to_tensor() for mino in self.next_minos],
+            self.score,
+            self.line_total_count,
+        )
+
+
 class Tetris:
     def __init__(
         self, height: int, width: int, minos: set[Mino], actions: set[Action]
@@ -41,6 +70,16 @@ class Tetris:
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
+
+    def observe(self) -> TetrisState:
+        return TetrisState(
+            self.board,
+            self.current_mino_state,
+            self.hold_mino,
+            list(self.mino_permutation)[:NEXT_MINO_NUM],
+            self.score,
+            self.line_total_count,
+        )
 
     def _generate_mino_state(self) -> MinoState:
         selected_mino = self.mino_permutation.popleft()
