@@ -1,5 +1,6 @@
 import copy
 import random
+import numpy as np
 from collections import deque
 
 from .board import TetrisBoard
@@ -25,6 +26,7 @@ class TetrisState:
         next_minos: list[Mino],
         score: int,
         line_total_count: int,
+        turn: int,
     ) -> None:
         self.board = board
         self.mino_state = mino_state
@@ -32,16 +34,33 @@ class TetrisState:
         self.next_minos = next_minos
         self.score = score
         self.line_total_count = line_total_count
+        self.turn = turn
+        self.size = self.get_size()
 
-    def to_tensor(self) -> tuple:
-        return (
-            self.board.to_tensor(),
-            self.mino_state.mino.to_tensor(),
-            self.mino_state.origin,
-            self.hold_mino.to_tensor() if self.hold_mino is not None else None,
-            [mino.to_tensor() for mino in self.next_minos],
-            self.score,
-            self.line_total_count,
+    def to_tensor(self) -> np.ndarray:
+        return np.concatenate(
+            [
+                self.board.to_tensor().flatten(),
+                self.mino_state.to_tensor().flatten(),
+                np.array([self.mino_state.origin[0], self.mino_state.origin[1]]),
+                self.hold_mino.to_tensor().flatten(),
+                np.concatenate(
+                    [mino.to_tensor().flatten() for mino in self.next_minos]
+                ),
+                np.array([self.score, self.line_total_count, self.turn]),
+            ]
+        )
+
+    def get_size(self) -> int:
+        return sum(
+            [
+                self.board.to_tensor().flatten().size,
+                self.mino_state.to_tensor().flatten().size,
+                2,
+                self.hold_mino.to_tensor().flatten().size,
+                sum([mino.to_tensor().flatten().size for mino in self.next_minos]),
+                3,
+            ]
         )
 
 
@@ -54,12 +73,13 @@ class Tetris:
         self.minos = minos  # 全種類の mino
         self.action_map = {action.id: action for action in actions}
 
-        self.hold_mino = None  # hold している mino
+        self.hold_mino = Mino(0, np.array([[0]]), VOID_CHAR)  # hold している mino
         self.hold_used = False  # 今のターンに hold したか否か
         self.current_action = None
 
         self.line_total_count = 0
         self.score = 0
+        self.turns = 0
 
         # 順列をランダムに shuffle して保持
         add_permutation = list(self.minos)
@@ -71,6 +91,23 @@ class Tetris:
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
 
+    def reset(self) -> None:
+        self.board = TetrisBoard(self.board.height, self.board.width, self.minos)
+        self.mino_permutation = deque()
+        self.hold_mino = Mino(0, np.array([[0]]), VOID_CHAR)
+        self.hold_used = False
+        self.line_total_count = 0
+        self.score = 0
+        self.turns = 0
+        self.game_over = False
+
+        add_permutation = list(self.minos)
+        random.shuffle(add_permutation)
+        for mino in add_permutation:
+            self.mino_permutation.append(mino)
+
+        self.current_mino_state = self._generate_mino_state()
+
     def observe(self) -> TetrisState:
         return TetrisState(
             self.board,
@@ -79,9 +116,11 @@ class Tetris:
             list(self.mino_permutation)[:NEXT_MINO_NUM],
             self.score,
             self.line_total_count,
+            self.turns,
         )
 
     def _generate_mino_state(self) -> MinoState:
+        self.turns += 1
         selected_mino = self.mino_permutation.popleft()
 
         # len(permutation) < 7 で新しい permutation を puh_back
@@ -107,7 +146,7 @@ class Tetris:
 
     def hold(self) -> None:
         self.hold_used = True
-        if self.hold_mino is None:
+        if self.hold_mino.id == 0:
             self.hold_mino = self.current_mino_state.mino
             self.current_mino_state = self._generate_mino_state()
         else:
