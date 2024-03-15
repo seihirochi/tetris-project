@@ -9,6 +9,7 @@ class MinoState:
         self.height = height
         self.width = width
         self.origin = origin
+        self.rotation = 0
 
     def __repr__(self) -> str:
         return f"MinoState(mino={self.mino}, origin={self.origin})"
@@ -29,6 +30,8 @@ class MinoState:
         # invalid なら rollback
         if self.is_invalid(field):
             self.mino.shape = prev_shape
+        else:
+            self.rotation = (self.rotation + 1) % 4
 
     def rotate_right(self, field: np.array) -> None:
         # 右回転 (時計回り)
@@ -37,6 +40,8 @@ class MinoState:
         # invalid なら rollback
         if self.is_invalid(field):
             self.mino.shape = prev_shape
+        else:
+            self.rotation = (self.rotation - 1) % 4
 
     def move(self, dx: int, dy: int, field: np.array) -> None:
         # 移動
@@ -63,3 +68,6 @@ class MinoState:
                 if field[self.origin[0] + i][self.origin[1] + j] != 0:
                     return True
         return False
+
+    def to_tensor(self) -> np.ndarray:
+        return np.array([self.mino.id, self.origin[0], self.origin[1], self.rotation])

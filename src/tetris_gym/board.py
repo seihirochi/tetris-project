@@ -29,7 +29,9 @@ class TetrisBoard:
         for i in range(state.mino.shape.shape[0]):
             for j in range(state.mino.shape.shape[1]):
                 if state.mino.shape[i][j] == 1:
-                    self.set_mino_id((state.origin[0] + i, state.origin[1] + j), state.mino.id)
+                    self.set_mino_id(
+                        (state.origin[0] + i, state.origin[1] + j), state.mino.id
+                    )
 
     def clear_lines(self) -> int:
         clear_count = 0
@@ -48,3 +50,6 @@ class TetrisBoard:
                 # 一番上は空行
                 self.board[0] = np.zeros(self.width)
         return clear_count
+
+    def to_tensor(self) -> np.ndarray:
+        return np.where(self.board > 0, 1, 0)

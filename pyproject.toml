@@ -8,12 +8,14 @@ authors = [
 dependencies = [
     "numpy>=1.26.4",
     "colr>=0.9.1",
+    "torch>=2.2.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
 
 [project.scripts]
 start = "tetris_project:start"
+train = "tetris_project:train"
 
 [build-system]
 requires = ["hatchling"]
