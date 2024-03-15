@@ -9,6 +9,8 @@ dependencies = [
     "numpy>=1.26.4",
     "colr>=0.9.1",
     "torch>=2.2.1",
+    "torchaudio>=2.2.1",
+    "torchvision>=0.17.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -32,3 +34,8 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tetris_project", "src/tetris_gym", "src/tests"]
+
+[sources]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu121"
+type = "index"
