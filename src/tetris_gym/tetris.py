@@ -1,11 +1,12 @@
 import copy
 import random
-import numpy as np
 from collections import deque
 
+import numpy as np
+
+from .action import Action
 from .board import TetrisBoard
 from .mino import Mino
-from .action import Action
 from .mino_state import MinoState
 
 EDGE_CHAR = "\033[48;5;255m　\x1b[0m"
@@ -81,12 +82,6 @@ class Tetris:
         self.score = 0
         self.turns = 0
 
-        # 順列をランダムに shuffle して保持
-        add_permutation = list(self.minos)
-        random.shuffle(add_permutation)
-        for mino in add_permutation:
-            self.mino_permutation.append(mino)
-
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
@@ -120,15 +115,15 @@ class Tetris:
         )
 
     def _generate_mino_state(self) -> MinoState:
-        self.turns += 1
-        selected_mino = self.mino_permutation.popleft()
-
         # len(permutation) < 7 で新しい permutation を puh_back
         if len(self.mino_permutation) < 7:
             add_permutation = copy.deepcopy(list(self.minos))
             random.shuffle(add_permutation)
             for mino in add_permutation:
                 self.mino_permutation.append(mino)
+
+        self.turns += 1
+        selected_mino = self.mino_permutation.popleft()
 
         return MinoState(
             mino=selected_mino,
@@ -137,14 +132,7 @@ class Tetris:
             origin=(0, self.board.width // 2 - selected_mino.shape.shape[1] // 2),
         )
 
-    def is_mino_landed(self) -> bool:
-        # mino_state を下にずらして origin が変わるか否かで判定
-        # state をコピーして使う
-        mino_state = copy.deepcopy(self.current_mino_state)
-        mino_state.move(1, 0, self.board.board)
-        return mino_state.origin == self.current_mino_state.origin
-
-    def hold(self) -> None:
+    def _hold(self) -> None:
         self.hold_used = True
         if self.hold_mino.id == 0:
             self.hold_mino = self.current_mino_state.mino
@@ -163,7 +151,7 @@ class Tetris:
                 self.current_mino_state.mino,
             )
 
-    def place(self) -> None:
+    def _place(self) -> None:
         self.hold_used = False  # hold 状況をリセット
         self.board.set_mino(self.current_mino_state)  # ミノをボードに固定
 
@@ -192,21 +180,23 @@ class Tetris:
         elif action.id == 1:  # move right
             self.current_mino_state.move(0, 1, self.board.board)
         elif action.id == 2:  # move down
-            if self.is_mino_landed():
-                self.place()
-            else:
-                self.current_mino_state.move(1, 0, self.board.board)
+            prev_origin = self.current_mino_state.origin
+            self.current_mino_state.move(1, 0, self.board.board)
+            if self.current_mino_state.origin == prev_origin:
+                self._place()
         elif action.id == 3:  # rotate left
             self.current_mino_state.rotate_left(self.board.board)
         elif action.id == 4:  # rotate right
             self.current_mino_state.rotate_right(self.board.board)
         elif action.id == 5:  # hold
             if self.hold_used is False:
-                self.hold()
+                self._hold()
         elif action.id == 6:  # hard drop
-            while not self.is_mino_landed():
+            prev_origin = None
+            while self.current_mino_state.origin != prev_origin:
+                prev_origin = self.current_mino_state.origin
                 self.current_mino_state.move(1, 0, self.board.board)
-            self.place()
+            self._place()
 
     def render(self) -> str:
         all_fields = []
