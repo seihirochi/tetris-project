@@ -1,7 +1,7 @@
 import numpy as np
 from colr import color
 
-from tetris_gym import Mino, Action
+from tetris_gym import Action, Mino
 
 mino_I = Mino(
     1,

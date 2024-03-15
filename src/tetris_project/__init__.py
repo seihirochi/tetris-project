@@ -1,8 +1,12 @@
-from tetris_gym import Tetris
+
+import gymnasium as gym
+
+import tetris_gym
 
 from .config import (HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
                      ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS)
-from .controller import DQN, DQNTrainerController, HumanController
+
+# from .controller import DQN, DQNTrainerController, HumanController
 
 
 def overwrite_print(text, line):
@@ -10,23 +14,25 @@ def overwrite_print(text, line):
 
 
 def start():
-    game = Tetris(20, 10, ORDINARY_TETRIS_MINOS, ORDINARY_TETRIS_ACTIONS)
-    controller = HumanController(
-        ORDINARY_TETRIS_ACTIONS,
-        HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-    )
-    while game.game_over is False:
-        overwrite_print(game.render(), 0)
-        action = controller.get_action()
-        game.step(action.id)
+    env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS)
+    env.reset()
+    done = False
 
-    # Game Over
-    overwrite_print(game.render(), 0)
+    while not done:
+        print(env.render())
+        command = input("Enter action:")
+        # command が action に無い場合は無視
+        if command not in HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP:
+            continue
+        action = HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP[command].id
+        _, _, done, _, _ = env.step(action)
+    # GameOver
+    print(env.render())
 
 
 def train():
     epoch = 5000
-    game = Tetris(20, 10, ORDINARY_TETRIS_MINOS, ORDINARY_TETRIS_ACTIONS)
+    game = Tetris(20, 10, ORDINARY_TETRIS_MINOS, ORDINARY_TETRIS_ACTIONS, 1)
     state = game.observe()
     model = DQN(state.size, len(ORDINARY_TETRIS_ACTIONS))
     controller = DQNTrainerController(ORDINARY_TETRIS_ACTIONS, model, 0.1)

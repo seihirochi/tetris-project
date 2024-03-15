@@ -19,7 +19,7 @@ class HumanController(Controller):
         super().__init__(actions)
         self.input_map = input_map
 
-    def get_action(self, _: TetrisState) -> Action:
+    def get_action(self) -> Action:
         while True:
             try:
                 action_input = input("Enter action: ")

@@ -69,5 +69,5 @@ class MinoState:
                     return True
         return False
 
-    def to_tensor(self) -> np.ndarray:
+    def to_tensor(self) -> np.array:
         return np.array([self.mino.id, self.origin[0], self.origin[1], self.rotation])

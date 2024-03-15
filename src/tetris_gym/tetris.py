@@ -4,7 +4,6 @@ from collections import deque
 
 import numpy as np
 
-from .action import Action
 from .board import TetrisBoard
 from .mino import Mino
 from .mino_state import MinoState
@@ -18,65 +17,23 @@ NEXT_MINO_LIST_WIDTH = 6
 LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
 
 
-class TetrisState:
-    def __init__(
-        self,
-        board: TetrisBoard,
-        mino_state: MinoState,
-        hold_mino: Mino,
-        next_minos: list[Mino],
-        score: int,
-        line_total_count: int,
-        turn: int,
-    ) -> None:
-        self.board = board
-        self.mino_state = mino_state
-        self.hold_mino = hold_mino
-        self.next_minos = next_minos
-        self.score = score
-        self.line_total_count = line_total_count
-        self.turn = turn
-        self.size = self.get_size()
-
-    def to_tensor(self) -> np.ndarray:
-        return np.concatenate(
-            [
-                self.board.to_tensor().flatten(),
-                self.mino_state.to_tensor().flatten(),
-                np.array([self.mino_state.origin[0], self.mino_state.origin[1]]),
-                self.hold_mino.to_tensor().flatten(),
-                np.concatenate(
-                    [mino.to_tensor().flatten() for mino in self.next_minos]
-                ),
-                np.array([self.score, self.line_total_count, self.turn]),
-            ]
-        )
-
-    def get_size(self) -> int:
-        return sum(
-            [
-                self.board.to_tensor().flatten().size,
-                self.mino_state.to_tensor().flatten().size,
-                2,
-                self.hold_mino.to_tensor().flatten().size,
-                sum([mino.to_tensor().flatten().size for mino in self.next_minos]),
-                3,
-            ]
-        )
-
-
 class Tetris:
     def __init__(
-        self, height: int, width: int, minos: set[Mino], actions: set[Action]
+        self, height: int, width: int, minos: set[Mino], action_mode=0
     ) -> None:
         self.board = TetrisBoard(height, width, minos)
         self.mino_permutation = deque()
         self.minos = minos  # 全種類の mino
-        self.action_map = {action.id: action for action in actions}
+        self.action_mode = action_mode
 
-        self.hold_mino = Mino(0, np.array([[0]]), VOID_CHAR)  # hold している mino
+        # self.hold_mino = Mino(0, np.array([[0]]), VOID_CHAR)  # hold している mino
+        self.hold_mino = MinoState(
+            mino=Mino(0, np.array([[0]]), VOID_CHAR),
+            height=height,
+            width=width,
+            origin=(0, 0),
+        )
         self.hold_used = False  # 今のターンに hold したか否か
-        self.current_action = None
 
         self.line_total_count = 0
         self.score = 0
@@ -86,32 +43,17 @@ class Tetris:
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
 
-    def reset(self) -> None:
-        self.board = TetrisBoard(self.board.height, self.board.width, self.minos)
-        self.mino_permutation = deque()
-        self.hold_mino = Mino(0, np.array([[0]]), VOID_CHAR)
-        self.hold_used = False
-        self.line_total_count = 0
-        self.score = 0
-        self.turns = 0
-        self.game_over = False
-
-        add_permutation = list(self.minos)
-        random.shuffle(add_permutation)
-        for mino in add_permutation:
-            self.mino_permutation.append(mino)
-
-        self.current_mino_state = self._generate_mino_state()
-
-    def observe(self) -> TetrisState:
-        return TetrisState(
-            self.board,
-            self.current_mino_state,
-            self.hold_mino,
-            list(self.mino_permutation)[:NEXT_MINO_NUM],
-            self.score,
-            self.line_total_count,
-            self.turns,
+    def observe(self) -> np.ndarray:
+        return np.concatenate(
+            [
+                self.board.to_tensor().flatten(),
+                self.current_mino_state.to_tensor().flatten(),
+                self.hold_mino.to_tensor().flatten(),
+                # NEXT_MINO_NUM 個までの next mino を 1 次元に変換
+                np.concatenate(
+                    [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+                )
+            ]
         )
 
     def _generate_mino_state(self) -> MinoState:
@@ -132,26 +74,18 @@ class Tetris:
             origin=(0, self.board.width // 2 - selected_mino.shape.shape[1] // 2),
         )
 
-    def _hold(self) -> None:
-        self.hold_used = True
-        if self.hold_mino.id == 0:
-            self.hold_mino = self.current_mino_state.mino
-            self.current_mino_state = self._generate_mino_state()
-        else:
-            self.current_mino_state, self.hold_mino = (
-                MinoState(
-                    mino=self.hold_mino,
-                    height=self.board.height,
-                    width=self.board.width,
-                    origin=(
-                        0,
-                        self.board.width // 2 - self.hold_mino.shape.shape[1] // 2,
-                    ),
-                ),
-                self.current_mino_state.mino,
-            )
+    def hold(self) -> None:
+        if self.hold_used:
+            return
 
-    def _place(self) -> None:
+        self.hold_used = True
+        if self.hold_mino.mino.id == 0:
+            self.hold_mino = self.current_mino_state
+            self.current_mino_state = self._generate_mino_state()
+        else: # swap
+            self.hold_mino, self.current_mino_state = self.current_mino_state, self.hold_mino
+
+    def place(self) -> None:
         self.hold_used = False  # hold 状況をリセット
         self.board.set_mino(self.current_mino_state)  # ミノをボードに固定
 
@@ -172,31 +106,19 @@ class Tetris:
                     != 0
                 ):
                     self.game_over = True
-
-    def step(self, actionId: int) -> None:
-        action = self.action_map[actionId]
-        if action.id == 0:  # move left
-            self.current_mino_state.move(0, -1, self.board.board)
-        elif action.id == 1:  # move right
-            self.current_mino_state.move(0, 1, self.board.board)
-        elif action.id == 2:  # move down
+    
+    def move_and_rotate_and_drop(self, y: int, rotate: int) -> None:
+        # ※ 移動・回転が不可能な場合はそれぞれ skip される実装
+        
+        self.current_mino_state.move(0, y - self.current_mino_state.origin[1], self.board.board)
+        while rotate > 0:
+            self.current_mino_state.rotate_left(self.board.board)
+            rotate -= 1
+        prev_origin = None
+        while self.current_mino_state.origin != prev_origin:
             prev_origin = self.current_mino_state.origin
             self.current_mino_state.move(1, 0, self.board.board)
-            if self.current_mino_state.origin == prev_origin:
-                self._place()
-        elif action.id == 3:  # rotate left
-            self.current_mino_state.rotate_left(self.board.board)
-        elif action.id == 4:  # rotate right
-            self.current_mino_state.rotate_right(self.board.board)
-        elif action.id == 5:  # hold
-            if self.hold_used is False:
-                self._hold()
-        elif action.id == 6:  # hard drop
-            prev_origin = None
-            while self.current_mino_state.origin != prev_origin:
-                prev_origin = self.current_mino_state.origin
-                self.current_mino_state.move(1, 0, self.board.board)
-            self._place()
+        self._place()
 
     def render(self) -> str:
         all_fields = []
@@ -255,13 +177,13 @@ class Tetris:
         now_line += 1  # 空行
 
         if self.hold_mino is not None:
-            for i in range(self.hold_mino.shape.shape[0]):
+            for i in range(self.hold_mino.mino.shape.shape[0]):
                 s = VOID_CHAR
-                if self.hold_mino.id == 4:
+                if self.hold_mino.mino.id == 4:
                     s += VOID_CHAR
-                for j in range(self.hold_mino.shape.shape[1]):
-                    if self.hold_mino.shape[i][j] == 1:
-                        s += self.hold_mino.char
+                for j in range(self.hold_mino.mino.shape.shape[1]):
+                    if self.hold_mino.mino.shape[i][j] == 1:
+                        s += self.hold_mino.mino.char
                     else:
                         s += VOID_CHAR
                 s += VOID_CHAR
