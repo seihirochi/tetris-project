@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Mapping
 
-from tetris_gym import Action, TetrisState
+from tetris_gym import Action
 
 
 class Controller(ABC):
@@ -10,7 +10,7 @@ class Controller(ABC):
         self.action_map = {action.id: action for action in actions}
 
     @abstractmethod
-    def get_action(self, state: TetrisState) -> Action:
+    def get_action(self) -> Action:
         pass
 
 

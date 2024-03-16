@@ -1,6 +1,7 @@
 import copy
 import random
 from collections import deque
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -74,9 +75,9 @@ class Tetris:
             origin=(0, self.board.width // 2 - selected_mino.shape.shape[1] // 2),
         )
 
-    def hold(self) -> None:
+    def hold(self) -> bool:
         if self.hold_used:
-            return
+            return False
 
         self.hold_used = True
         if self.hold_mino.mino.id == 0:
@@ -84,8 +85,10 @@ class Tetris:
             self.current_mino_state = self._generate_mino_state()
         else: # swap
             self.hold_mino, self.current_mino_state = self.current_mino_state, self.hold_mino
+        return True
 
     def place(self) -> None:
+        self.score += 1 # 設置出来たら +1 点
         self.hold_used = False  # hold 状況をリセット
         self.board.set_mino(self.current_mino_state)  # ミノをボードに固定
 
@@ -107,18 +110,52 @@ class Tetris:
                 ):
                     self.game_over = True
     
-    def move_and_rotate_and_drop(self, y: int, rotate: int) -> None:
-        # ※ 移動・回転が不可能な場合はそれぞれ skip される実装
-        
-        self.current_mino_state.move(0, y - self.current_mino_state.origin[1], self.board.board)
+    def move_and_rotate_and_drop(self, y: int, rotate: int) -> bool:
+        # (y座標変位, 回転回数) -> 移動可能 flag
+        prev_state = copy.deepcopy(self.current_mino_state)
+        flag = True
+
+        # move
+        while y != self.current_mino_state.origin[0]:
+            if y > self.current_mino_state.origin[0]:
+                flag = self.current_mino_state.move(0, -1, self.board.board)
+                y -= 1
+            elif y < self.current_mino_state.origin[0]:
+                flag = self.current_mino_state.move(0, 1, self.board.board)
+                y += 1
+            if not flag:
+                self.current_mino_state = prev_state
+                return False
+        # rotate
         while rotate > 0:
-            self.current_mino_state.rotate_left(self.board.board)
+            flag = self.current_mino_state.rotate_left(self.board.board)
             rotate -= 1
-        prev_origin = None
-        while self.current_mino_state.origin != prev_origin:
-            prev_origin = self.current_mino_state.origin
-            self.current_mino_state.move(1, 0, self.board.board)
-        self._place()
+            if not flag:
+                self.current_mino_state = prev_state
+                return False
+        # drop
+        while flag:
+            flag = self.current_mino_state.move(1, 0, self.board.board)
+        self.place()
+        return True
+    
+    def get_possible_actions(self) -> List[Tuple[Union[int, list], np.ndarray]]:
+        # List( Tuple( 可能な行動, その状態 )) を返す
+        actions = []
+        if self.action_mode == 0:
+            # actions = [1, 2, 3, 4, 5, 6, 7]
+            # ※ 現在は train として使わないので一旦スルー
+            pass
+        elif self.action_mode == 1:
+            for y in range(self.board.width):
+                for rotate in range(4):
+                    # 行動出来るかを確認
+                    # ※ 本来ここは deepcopy ではなく差分更新で高速化すべき
+                    Tetris_copy = copy.deepcopy(self)
+                    flag = Tetris_copy.move_and_rotate_and_drop(y, rotate)
+                    if flag:
+                        actions.append(((y, rotate), Tetris_copy.observe()))
+        return actions
 
     def render(self) -> str:
         all_fields = []

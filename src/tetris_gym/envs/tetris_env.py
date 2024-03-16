@@ -33,13 +33,16 @@ class TetrisEnv(gym.Env):
             ))
 
     def reset(self, seed=None, options=None) -> tuple:
+        # ゲームを初期化 -> tuple( 観測空間, その他の情報 )
         self.tetris = Tetris(self.height, self.width, self.minos, self.action_mode)
         obs = self.tetris.observe()
         info = {}  # other_info
         return obs, info
 
-    # int or tuple の action を受け取り、ゲームを進める
     def step(self, action: Union[int, tuple]) -> tuple:
+        # action_mode = 0 : 0, 1, 2, 3, 4, 5, 6
+        # action_mode = 1 : action => tuple(action/width, action%width) => (y, rotate)
+
         if self.action_mode == 0:
             if action == 0:  # move left
                 self.tetris.current_mino_state.move(0, -1, self.tetris.board.board)
@@ -63,8 +66,9 @@ class TetrisEnv(gym.Env):
                     self.tetris.current_mino_state.move(1, 0, self.tetris.board.board)
                 self.tetris.place()
         elif self.action_mode == 1:
-            x, y = action
-            self._move_and_rotate_and_drop(x, y)
+            y, rotate = action % self.width, action // self.width
+            # print("y, rotate:", y, rotate)
+            self.tetris.move_and_rotate_and_drop(y, rotate)
 
         # tuple(観測情報, 報酬, ゲーム終了フラグ, 追加情報)
         return self.tetris.observe(), self.tetris.score, self.tetris.game_over, False, {}

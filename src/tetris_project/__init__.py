@@ -1,12 +1,11 @@
 
+from statistics import mean, median
+
 import gymnasium as gym
 
-import tetris_gym
-
+from .ai.DQN import DQN
 from .config import (HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS)
-
-# from .controller import DQN, DQNTrainerController, HumanController
+                     ORDINARY_TETRIS_MINOS)
 
 
 def overwrite_print(text, line):
@@ -31,46 +30,39 @@ def start():
 
 
 def train():
-    epoch = 5000
-    game = Tetris(20, 10, ORDINARY_TETRIS_MINOS, ORDINARY_TETRIS_ACTIONS, 1)
-    state = game.observe()
-    model = DQN(state.size, len(ORDINARY_TETRIS_ACTIONS))
-    controller = DQNTrainerController(ORDINARY_TETRIS_ACTIONS, model, 0.1)
-    rewards = []
-    # 累積報酬の割引率
-    gamma = 0.9
-    print("Training...")
-    for i in range(epoch):
-        print(f"Epoch {i+1}/{epoch}")
-        prev_rewards = 0
-        while game.game_over is False:
-            action = controller.get_action(state)
-            game.step(action.id)
-            next_state = game.observe()
-            reward = controller.evaluate(next_state)
-            reward = reward + gamma * prev_rewards
-            controller.train(state, action, next_state, reward)
-            state = next_state
-            prev_rewards = reward
-        print(game.render(), end="\r")
-        print("Reward:", reward)
-        rewards.append(reward)
-        print("Current epsilon:", controller.epsilon)
-        print("Epoch finished!")
-        game.reset()
-    print("Done!")
-    with open("rewards.csv", "w") as f:
-        f.write("epoch,reward\n")
-        for i, reward in enumerate(rewards):
-            f.write(f"{i},{reward}\n")
-    print("Saving model...")
-    model.save("model.pth")
-    print("Done!")
-    print("Training finished!")
-    model.save("model.pth")
-    print("Done!")
-    print("Training finished!")
+    env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS, action_mode=1)
+    print("Env created!")
+    env.reset()
+    print("Env reset!")
 
+    # env から input と output の次元を取得
+    input_size = env.observation_space.shape[0]
+    output_size = env.action_space.spaces[0].n * env.action_space.spaces[1].n # action_mode = 1 の場合
+    print("Input size:", input_size)
+    print("Output size:", output_size)
+    agent = DQN(input_size, output_size)
+    agent.load() # 途中経過をロード
+    
+    running = True
+    total_games = 0
+    total_steps = 0
+    while running:
+        steps, rewards = agent.train(env, episodes=25)
+        total_games += len(rewards)
+        total_steps += steps
+        agent.save() # 途中経過を保存
+        print(overwrite_print(env.render(), 0))
+        print("==================")
+        print("* Total Games: ", total_games)
+        print("* Total Steps: ", total_steps)
+        print("* Epsilon: ", agent.epsilon)
+        print("*")
+        print("* Average: ", sum(rewards) / len(rewards))
+        print("* Median: ", median(rewards))
+        print("* Mean: ", mean(rewards))
+        print("* Min: ", min(rewards))
+        print("* Max: ", max(rewards))
+        print("==================")
 
 if __name__ == "__main__":
     train()

@@ -23,33 +23,39 @@ class MinoState:
     def __hash__(self) -> int:
         return hash((self.mino, self.origin))
 
-    def rotate_left(self, field: np.array) -> None:
+    def rotate_left(self, field: np.array) -> bool:
         # 左回転 (時計回り)
         prev_shape = self.mino.shape
         self.mino.shape = np.rot90(prev_shape)
         # invalid なら rollback
         if self.is_invalid(field):
             self.mino.shape = prev_shape
+            return False
         else:
             self.rotation = (self.rotation + 1) % 4
+            return True
 
-    def rotate_right(self, field: np.array) -> None:
+    def rotate_right(self, field: np.array) -> bool:
         # 右回転 (時計回り)
         prev_shape = self.mino.shape
         self.mino.shape = np.rot90(prev_shape, -1)
         # invalid なら rollback
         if self.is_invalid(field):
             self.mino.shape = prev_shape
+            return False
         else:
             self.rotation = (self.rotation - 1) % 4
+            return True
 
-    def move(self, dx: int, dy: int, field: np.array) -> None:
+    def move(self, dx: int, dy: int, field: np.array) -> bool:
         # 移動
         prev_origin = self.origin
         self.origin = (prev_origin[0] + dx, prev_origin[1] + dy)
         # invalid なら rollback
         if self.is_invalid(field):
             self.origin = prev_origin
+            return False
+        return True
 
     def is_invalid(self, field: np.array) -> bool:
         for i in range(self.mino.shape.shape[0]):
