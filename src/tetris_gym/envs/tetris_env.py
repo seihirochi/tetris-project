@@ -16,32 +16,39 @@ class TetrisEnv(gym.Env):
         self.minos = minos
         self.action_mode = action_mode
 
-        # 各部分の観測空間を定義
+        # Dellacherie's algorithm.
         self.observation_space = gym.spaces.MultiDiscrete(
             [2] * height*width +               # board
-            [len(minos)+1, height, width, 4] + # current mino
-            [len(minos)+1, height, width, 4] + # hold mino
+            # [self.height * self.width] * 9 + # board の特徴量
+            [len(minos)+1] +                   # current mino
+            # [len(minos)+1] +                 # hold mino
             [len(minos)+1] * NEXT_MINO_NUM     # next minos
         )
+
         if action_mode == 0:
             # Nothing, Left, Right, Rotate left, Rotate right, Drop, Full Drop, Hold
             self.action_space = gym.spaces.Discrete(8)
         elif action_mode == 1:
             self.action_space = gym.spaces.Tuple((
-                gym.spaces.Discrete(width), # Y
+                gym.spaces.Discrete(width-1), # Y
                 gym.spaces.Discrete(4),     # Rotation
             ))
+            
+    def get_possible_actions(self):
+        return self.tetris.get_possible_actions()
 
     def reset(self, seed=None, options=None) -> tuple:
         # ゲームを初期化 -> tuple( 観測空間, その他の情報 )
         self.tetris = Tetris(self.height, self.width, self.minos, self.action_mode)
         obs = self.tetris.observe()
         info = {}  # other_info
-        return obs, info
+        return np.array(obs), info
 
     def step(self, action: Union[int, tuple]) -> tuple:
         # action_mode = 0 : 0, 1, 2, 3, 4, 5, 6
         # action_mode = 1 : action => tuple(action/width, action%width) => (y, rotate)
+
+        prev_score = self.tetris.score
 
         if self.action_mode == 0:
             if action == 0:  # move left
@@ -66,12 +73,17 @@ class TetrisEnv(gym.Env):
                     self.tetris.current_mino_state.move(1, 0, self.tetris.board.board)
                 self.tetris.place()
         elif self.action_mode == 1:
-            y, rotate = action % self.width, action // self.width
-            # print("y, rotate:", y, rotate)
+            y, rotate = action
+            # print(f"\ny: {y}, rotate: {rotate}")
             self.tetris.move_and_rotate_and_drop(y, rotate)
 
-        # tuple(観測情報, 報酬, ゲーム終了フラグ, 追加情報)
-        return self.tetris.observe(), self.tetris.score, self.tetris.game_over, False, {}
+        # このターンで得た報酬
+        reward = self.tetris.score - prev_score
+        if self.tetris.game_over:
+            reward = -1
+
+        # tuple(観測情報, 報酬, ゲーム終了フラグ, {可能な行動集合} )
+        return np.array(self.tetris.observe()), reward, self.tetris.game_over, False, {}
 
     def render(self) -> str:
         return self.tetris.render()

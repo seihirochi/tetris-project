@@ -1,101 +1,93 @@
 import os
 import random
+from collections import deque
 from pathlib import Path
 from typing import List, Tuple, Union
 
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
+import tensorflow as tf
 from gymnasium import Env
+from keras.layers import Dense
+from keras.models import Sequential, load_model
+from keras.optimizers import Adam
 
-WEIGHT_PATH = os.path.join(os.path.dirname(__file__), 'tetris_DQN.pth')
+WEIGHT_PATH = os.path.join(os.path.dirname(__file__), 'tetris_DQN.h5')
 LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
 
+def huberloss(y_true, y_pred):
+    err = y_true - y_pred
+    cond = tf.abs(err) < 1.0
+    L2 = 0.5 * tf.square(err)
+    L1 = tf.abs(err) - 0.5
+    loss = tf.where(cond, L2, L1)
+    return tf.reduce_mean(loss)
+
 class ExperienceBuffer:
-    def __init__(self, buffer_size=20000):
-        self.buffer = []
-        self.buffer_size = buffer_size
+    def __init__(self, buffer_size=10000):
+        # ※ deque は最大長を超えた場合に自動で捨ててくれる
+        self.buffer = deque(maxlen=buffer_size)
 
     def add(self, experience):
-        # Replay Buffer には (observe, reward, next_observe, done) を追加
-        if len(self.buffer) >= self.buffer_size:
-            self.buffer.pop(0)
+        # Replay Buffer には (observe, action, reward, next_observe, done) を追加
         self.buffer.append(experience)
 
-    def sample(self, size: int) -> List[Tuple[np.ndarray, float, np.ndarray, bool]]:
-        return random.sample(self.buffer, size)
+    def sample(self, size: int) -> List[Tuple[np.ndarray, int, float, np.ndarray, bool]]:
+        idx = np.random.choice(len(self.buffer), size, replace=False)
+        return [self.buffer[i] for i in idx]
+    
+    def len(self) -> int:
+        return len(self.buffer)
 
-class DQN(nn.Module):
-    def __init__(self, input_size: int, output_size: int, discount=0.99, epsilon=0.5, epsilon_min=0.0001, epsilon_decay=0.9995) -> None:
+class DQN:
+    def __init__(self, input_size: int, output_size: int, discount=0.90, epsilon=1.0, epsilon_min=0.0001, epsilon_decay=0.9995) -> None:
         super().__init__()
         self.discount = discount # 割引率
         self.epsilon = epsilon # ε-greedy法 の ε
         self.epsilon_min = epsilon_min # ε-greedy法 の ε の最小値
         self.epsilon_decay = epsilon_decay # ε-greedy法 の ε の減衰率
-        self.loss_fn = nn.MSELoss() # 損失関数
+
         self.experience_buffer = ExperienceBuffer()
-        self.input_size = input_size
-        self.output_size = output_size
 
-        self._create_model()
-        self.optimizer = optim.Adam(self.parameters(), lr=0.01) # 最適化手法
-
-    def _create_model(self) -> nn.Module:
         # 3層のニューラルネットワーク
-        # Linear(input_size, 128) -> ReLU -> Linear(128, 64) -> ReLU -> Linear(64, output_size) -> Softmax
-        self.fc1 = nn.Linear(self.input_size, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, self.output_size)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        return self.fc3(x)
+        self.model = Sequential([
+            Dense(128, input_shape=(input_size,), activation='relu'),
+            Dense(64, activation='relu'),
+            Dense(output_size, activation='linear')
+        ])
+        self.optimizer = Adam(learning_rate=0.00001)
+        self.model.compile(loss=huberloss, optimizer=self.optimizer)
     
-    def act(self, state: np.ndarray) -> int:
+    def act(self, state: np.ndarray, possible_actions: list) -> Union[int, Tuple[int, int]]:
         # 状態から最適な行動を選択
         # action_mode = 0 : 0, 1, 2, 3, 4, 5, 6
         # action_mode = 1 : (y, rotate) => 
         # ※ 厳密にやるなら action_mode によって分岐させるべき(?)
 
         if random.random() < self.epsilon: # ε-greedy法
-            return random.choice(range(self.output_size))
-        
-        max_rating = None
-        best_action = None
-
-        rating = self._predict_rating(state)
-
-        for action in range(self.output_size):
-            if max_rating is None or rating[action] > max_rating:
-                max_rating = rating[action]
-                best_action = action
-        return best_action
-
-    def _predict_rating(self, state: np.ndarray) -> np.ndarray:
-        # 状態 -> 行動価値
-        with torch.no_grad():
-            state_tensor = torch.tensor(state, dtype=torch.float32)
-            return self.forward(state_tensor).numpy()
+            return random.choice(possible_actions)
+        else:
+            rating = self.model.predict(state.reshape(1, -1), verbose=0)[0]
+            action = np.argmax(rating)
+            return (action % 9, action // 9)
         
     def train(self, env: Env, episodes=1):
-
         # 統計情報として、エピソードごとの報酬とステップ数を保存
         rewards = []
         steps = 0
 
-        for episode in range(episodes):
+        for _ in range(episodes):
             state, _ = env.reset()
             done = False
             total_reward = 0
 
             while not done:
-                action = self.act(state) # 行動を選択 (ε-greedy法)
-                next_state, reward, done, _, _ = env.step(action) # 行動を実行
-                self.experience_buffer.add((state, reward, next_state, done))
-                state = next_state
+                possible_actions = env.get_possible_actions()
+                action = self.act(state, possible_actions) # 行動を選択 (ε-greedy法)
 
+                next_state, reward, done, _, _ = env.step(action) # 行動を実行
+                self.experience_buffer.add((state, action, reward, next_state, done))
+
+                state = next_state
                 total_reward += reward
                 steps += 1
 
@@ -105,42 +97,47 @@ class DQN(nn.Module):
             self.learn()
         return [steps, rewards]
     
-    def learn(self, batch_size=512, epochs=1):
+    def learn(self, batch_size=32, epochs=1):
         if len(self.experience_buffer.buffer) < batch_size:
-            return # バッチサイズよりも経験が少ない場合は学習しない
-        
-        for _ in range(epochs):
-            # 訓練データ
-            train_x = []
-            train_y = []
-            # リプレイバッファから random sampling
-            batch = self.experience_buffer.sample(batch_size)
+            return 
 
-            # 各 sample から行動価値を計算
-            for i, (state, reward, next_state, done) in enumerate(batch):
-                q = reward
-                rating = self._predict_rating(next_state)
-                if not done:
-                    q = reward + self.discount * np.max(rating)
-                train_x.append(state)
-                train_y.append(q)
+        # 訓練データ
+        batch = self.experience_buffer.sample(batch_size)
 
-            # 学習
-            train_x = torch.tensor(train_x, dtype=torch.float32)
-            train_y = torch.tensor(train_y, dtype=torch.float32)
-            self.optimizer.zero_grad()  # 勾配をゼロにリセット
-            predictions = self.forward(train_x)  # 予測を行う
-            loss = self.loss_fn(predictions, train_y.unsqueeze(1))  # 損失を計算
-            loss.backward()  # 逆伝播 (nn.Modules のおかげで自動で勾配計算してくれる)
-            self.optimizer.step()  # パラメータの更新
-        
+        # バッチ内の状態に対する予測を一括して計算
+        states = np.array([sample[0] for sample in batch])
+        targets = self.model.predict(states)
+        next_states = np.array([sample[3] for sample in batch])
+        next_targets = self.model.predict(next_states)
+        print("Buffer length:", self.experience_buffer.len())
+
+        # 最初のデータの argmax とその行動価値関数 Q(s, a) を表示
+        action_idx = np.argmax(targets[0])
+        action_value = targets[0][action_idx]
+        print(f"Action value for the first sample: Action index = {action_idx}, Value = {action_value}")
+
+        for i, (_, action, reward, _, done) in enumerate(batch):
+            action = action[0] + action[1] * 9
+            if done:
+                targets[i][action] = reward
+            else:
+                targets[i][action] = reward + self.discount * np.max(next_targets[i])
+
+        # 学習
+        self.model.fit(states, targets, batch_size=batch_size, epochs=epochs, verbose=0)
+        # 学習後に今の推測値を表示
+        # targets = self.model.predict(states)
+        # action_idx = np.argmax(targets[0])
+        # action_value = targets[0][action_idx]
+        # print(f"Action value for the first sample after learning: Action index = {action_idx}, Value = {action_value}")
+
         # 学習させる度に ε を減衰
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 
     def save(self) -> None:
         if Path(WEIGHT_PATH).is_file():
-            torch.save(self.state_dict(), WEIGHT_PATH)
+            self.model.save(WEIGHT_PATH)
 
     def load(self) -> None:
         if Path(WEIGHT_PATH).is_file():
-            self.load_state_dict(torch.load(WEIGHT_PATH))
+            self.model = load_model(WEIGHT_PATH)

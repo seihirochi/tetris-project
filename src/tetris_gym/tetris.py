@@ -15,7 +15,7 @@ VOID_CHAR = "　"
 WALL_WIDTH = 1
 NEXT_MINO_NUM = 3
 NEXT_MINO_LIST_WIDTH = 6
-LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
+LINE_CLEAR_SCORE = [0, 1, 3, 5, 8]
 
 
 class Tetris:
@@ -38,24 +38,14 @@ class Tetris:
 
         self.line_total_count = 0
         self.score = 0
-        self.turns = 0
+
+        # 直近で消されたミノ & 消されたライン集合
+        self.latest_clear_mino_state = None
+        self.latest_clear_lines = 0
 
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
-
-    def observe(self) -> np.ndarray:
-        return np.concatenate(
-            [
-                self.board.to_tensor().flatten(),
-                self.current_mino_state.to_tensor().flatten(),
-                self.hold_mino.to_tensor().flatten(),
-                # NEXT_MINO_NUM 個までの next mino を 1 次元に変換
-                np.concatenate(
-                    [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
-                )
-            ]
-        )
 
     def _generate_mino_state(self) -> MinoState:
         # len(permutation) < 7 で新しい permutation を puh_back
@@ -65,7 +55,6 @@ class Tetris:
             for mino in add_permutation:
                 self.mino_permutation.append(mino)
 
-        self.turns += 1
         selected_mino = self.mino_permutation.popleft()
 
         return MinoState(
@@ -88,13 +77,14 @@ class Tetris:
         return True
 
     def place(self) -> None:
-        self.score += 1 # 設置出来たら +1 点
+        # self.score += 1 # 設置出来たら +1 点
         self.hold_used = False  # hold 状況をリセット
         self.board.set_mino(self.current_mino_state)  # ミノをボードに固定
 
-        line_count = self.board.clear_lines()  # ラインが揃ったら消す
-        self.line_total_count += line_count
-        self.score += LINE_CLEAR_SCORE[line_count]  # スコア加算
+        self.latest_clear_lines = self.board.clear_lines()  # ラインが揃ったら消す
+        self.latest_clear_mino_state = self.current_mino_state # 消去に用いたミノを記録
+        self.line_total_count += len(self.latest_clear_lines)  # 消したライン数を加算
+        self.score += LINE_CLEAR_SCORE[len(self.latest_clear_lines)]  # 消したライン数に応じてスコアを加算
 
         self.current_mino_state = self._generate_mino_state()  # 新しいミノを生成
 
@@ -114,18 +104,18 @@ class Tetris:
         # (y座標変位, 回転回数) -> 移動可能 flag
         prev_state = copy.deepcopy(self.current_mino_state)
         flag = True
+        # print("Start!")
 
-        # move
-        while y != self.current_mino_state.origin[0]:
-            if y > self.current_mino_state.origin[0]:
+        # move y
+        while y != self.current_mino_state.origin[1]:
+            if y < self.current_mino_state.origin[1]:
                 flag = self.current_mino_state.move(0, -1, self.board.board)
-                y -= 1
-            elif y < self.current_mino_state.origin[0]:
+            elif y > self.current_mino_state.origin[1]:
                 flag = self.current_mino_state.move(0, 1, self.board.board)
-                y += 1
             if not flag:
                 self.current_mino_state = prev_state
                 return False
+        # print("Move y done!")
         # rotate
         while rotate > 0:
             flag = self.current_mino_state.rotate_left(self.board.board)
@@ -133,13 +123,17 @@ class Tetris:
             if not flag:
                 self.current_mino_state = prev_state
                 return False
+        # print("Rotate done!")
         # drop
         while flag:
             flag = self.current_mino_state.move(1, 0, self.board.board)
+        # print("last origin:", self.current_mino_state.origin)
         self.place()
+        # print("Place done!")
+        # print()
         return True
     
-    def get_possible_actions(self) -> List[Tuple[Union[int, list], np.ndarray]]:
+    def get_possible_actions(self) -> List[Tuple[Union[int, list]]]:
         # List( Tuple( 可能な行動, その状態 )) を返す
         actions = []
         if self.action_mode == 0:
@@ -154,8 +148,135 @@ class Tetris:
                     Tetris_copy = copy.deepcopy(self)
                     flag = Tetris_copy.move_and_rotate_and_drop(y, rotate)
                     if flag:
-                        actions.append(((y, rotate), Tetris_copy.observe()))
+                        actions.append((y, rotate))
         return actions
+    
+    def observe(self) -> np.ndarray:
+        # observe を単なる盤面にすると複雑で学習困難
+        # ⇒ Dellacherie’s Algorithm
+        # return np.concatenate([
+        #     [
+        #         self.line_total_count,
+        #         self.get_hole_count(),
+        #         self.get_latest_clear_mino_heght(),
+        #         self.get_row_transitions(),
+        #         self.get_column_transitions(),
+        #         self.get_bumpiness(),
+        #         self.get_eroded_piece_cells(),
+        #         self.get_cumulative_wells(),
+        #         self.get_aggregate_height(),
+        #     ],
+        #     self.current_mino_state.to_tensor().flatten()
+        # ])
+
+        return np.concatenate(
+            [
+                self.board.to_tensor().flatten(),
+                self.current_mino_state.mino.to_tensor().flatten(),
+                # self.hold_mino.mino.to_tensor().flatten(),
+                # # NEXT_MINO_NUM 個までの next mino を 1 次元に変換
+                np.concatenate(
+                    [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+                )
+            ]
+        )
+
+    def get_hole_count(self) -> int:
+        # ========== hole_count ========== #
+        # 空マスで自身より上部に fill なマスがあるマス総数
+        res = 0
+        for j in range(self.board.width):
+            flag = False
+            for i in range(self.board.height):
+                if self.board.board[i][j] != 0:
+                    flag = True
+                if flag and self.board.board[i][j] == 0:
+                    res += 1
+        return res
+    
+    def get_latest_clear_mino_heght(self) -> int:
+        if self.latest_clear_mino_state is None:
+            return 0
+        return self.board.height - self.latest_clear_mino_state.origin[0]
+    
+    def get_row_transitions(self) -> int:
+        # ========== row_transitions ========== #
+        # 各行で fill ⇒ empty または empty ⇒ fill に変化する回数
+        res = 0
+        for i in range(self.board.height):
+            for j in range(self.board.width - 1):
+                if ( (self.board.board[i][j] != 0) != (self.board.board[i][j + 1] != 0 ) or
+                    (self.board.board[i][j] == 0) != (self.board.board[i][j + 1] == 0) ):
+                    res += 1
+        return res
+
+    def get_column_transitions(self) -> int:
+        # ========== column_transitions ========== #
+        # 各列で fill ⇒ empty または empty ⇒ fill に変化する回数
+        res = 0
+        for j in range(self.board.width):
+            for i in range(self.board.height - 1):
+                if ( (self.board.board[i][j] != 0) != (self.board.board[i + 1][j] != 0 ) or
+                    (self.board.board[i][j] == 0) != (self.board.board[i + 1][j] == 0) ):
+                    res += 1
+        return res
+    
+    def get_bumpiness(self) -> int:
+        # ========== bumpiness ========== #
+        # 高さの差 (変化) の総和
+        res = 0
+        prev_height = self.board.height
+        for j in range(self.board.width):
+            height = 0
+            for i in range(self.board.height):
+                if self.board.board[i][j] != 0:
+                    height = self.board.height - i
+                    break
+            if j != 0:
+                res += abs(prev_height - height)
+            prev_height = height
+        return res
+    
+    def get_eroded_piece_cells(self) -> int:
+        # ========== eroded_piece_cells ========== #
+        # 直近の消したライン数 * それに貢献した直近のミノのセル数
+        res = 0
+        if self.latest_clear_mino_state is not None:
+            for i in range(self.latest_clear_mino_state.mino.shape.shape[0]):
+                for j in range(self.latest_clear_mino_state.mino.shape.shape[1]):
+                    if (self.latest_clear_mino_state.mino.shape[i][j] == 1 
+                        and self.latest_clear_lines.count(self.latest_clear_mino_state.origin[0] + i) > 0):
+                        res += 1
+        return res
+    
+    def get_cumulative_wells(self) -> int:
+        # ========== cumulatve_well ========== #
+        # 左右が fill な空マスにおいて上に k 連続空マスが続く時
+        # well(i,j) = ∑_{i=1}^{k} i = k(k+1)/2
+        # cumulatve_well = ∑ well(i,j)
+        res = 0
+        for j in range(self.board.width):
+            for i in range(self.board.height-1, -1, -1):
+                well_flag = (self.board.board[i][j] == 0)
+                well_flag &= ( j == 0 or self.board.board[i][j-1] != 0)
+                well_flag &= ( j == self.board.width - 1 or self.board.board[i][j+1] != 0)
+                if well_flag:
+                    k = 0
+                    while i-k >= 0 and self.board.board[i-k][j] == 0:
+                        k += 1
+                    res += k * (k+1) // 2
+        return res
+
+    def get_aggregate_height(self) -> int:
+        # ========== aggregate_height ========== #
+        # aggregate_height = ∑_{j=1}^{w} height(j)
+        res = 0
+        for j in range(self.board.width):
+            for i in range(self.board.height):
+                if self.board.board[i][j] != 0:
+                    res += self.board.height - i
+                    break
+        return res
 
     def render(self) -> str:
         all_fields = []
