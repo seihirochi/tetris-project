@@ -15,7 +15,7 @@ VOID_CHAR = "　"
 WALL_WIDTH = 1
 NEXT_MINO_NUM = 3
 NEXT_MINO_LIST_WIDTH = 6
-LINE_CLEAR_SCORE = [0, 1, 3, 5, 8]
+LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
 
 
 class Tetris:
@@ -77,7 +77,7 @@ class Tetris:
         return True
 
     def place(self) -> None:
-        # self.score += 1 # 設置出来たら +1 点
+        self.score += 1 # 設置出来たら +1 点
         self.hold_used = False  # hold 状況をリセット
         self.board.set_mino(self.current_mino_state)  # ミノをボードに固定
 
@@ -133,7 +133,7 @@ class Tetris:
         # print()
         return True
     
-    def get_possible_actions(self) -> List[Tuple[Union[int, list]]]:
+    def get_possible_states(self) -> List[Tuple[Union[int, list]]]:
         # List( Tuple( 可能な行動, その状態 )) を返す
         actions = []
         if self.action_mode == 0:
@@ -148,33 +148,35 @@ class Tetris:
                     Tetris_copy = copy.deepcopy(self)
                     flag = Tetris_copy.move_and_rotate_and_drop(y, rotate)
                     if flag:
-                        actions.append((y, rotate))
+                        actions.append(((y, rotate), Tetris_copy.observe()))
         return actions
     
     def observe(self) -> np.ndarray:
         # observe を単なる盤面にすると複雑で学習困難
         # ⇒ Dellacherie’s Algorithm
-        # return np.concatenate([
-        #     [
-        #         self.line_total_count,
-        #         self.get_hole_count(),
-        #         self.get_latest_clear_mino_heght(),
-        #         self.get_row_transitions(),
-        #         self.get_column_transitions(),
-        #         self.get_bumpiness(),
-        #         self.get_eroded_piece_cells(),
-        #         self.get_cumulative_wells(),
-        #         self.get_aggregate_height(),
-        #     ],
-        #     self.current_mino_state.to_tensor().flatten()
-        # ])
+        return np.concatenate([
+            [
+                self.line_total_count,
+                self.get_hole_count(),
+                self.get_latest_clear_mino_heght(),
+                self.get_row_transitions(),
+                self.get_column_transitions(),
+                self.get_bumpiness(),
+                self.get_eroded_piece_cells(),
+                self.get_cumulative_wells(),
+                self.get_aggregate_height(),
+            ],
+            self.current_mino_state.mino.to_tensor().flatten(),
+            np.concatenate(
+                [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+            )
+        ])
 
         return np.concatenate(
             [
                 self.board.to_tensor().flatten(),
                 self.current_mino_state.mino.to_tensor().flatten(),
                 # self.hold_mino.mino.to_tensor().flatten(),
-                # # NEXT_MINO_NUM 個までの next mino を 1 次元に変換
                 np.concatenate(
                     [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
                 )

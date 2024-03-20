@@ -18,8 +18,8 @@ class TetrisEnv(gym.Env):
 
         # Dellacherie's algorithm.
         self.observation_space = gym.spaces.MultiDiscrete(
-            [2] * height*width +               # board
-            # [self.height * self.width] * 9 + # board の特徴量
+            # [2] * height*width +               # board
+            [self.height * self.width] * 9 + # board の特徴量
             [len(minos)+1] +                   # current mino
             # [len(minos)+1] +                 # hold mino
             [len(minos)+1] * NEXT_MINO_NUM     # next minos
@@ -34,8 +34,8 @@ class TetrisEnv(gym.Env):
                 gym.spaces.Discrete(4),     # Rotation
             ))
             
-    def get_possible_actions(self):
-        return self.tetris.get_possible_actions()
+    def get_possible_states(self):
+        return self.tetris.get_possible_states()
 
     def reset(self, seed=None, options=None) -> tuple:
         # ゲームを初期化 -> tuple( 観測空間, その他の情報 )

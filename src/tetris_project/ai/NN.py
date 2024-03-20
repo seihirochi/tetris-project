@@ -8,11 +8,14 @@ import numpy as np
 import tensorflow as tf
 from gymnasium import Env
 from keras.layers import Dense
-from keras.models import Sequential, load_model
+from keras.models import Sequential, load_model, save_model
 from keras.optimizers import Adam
 
-WEIGHT_PATH = os.path.join(os.path.dirname(__file__), 'tetris_DQN.h5')
+WEIGHT_IN_PATH = os.path.join(os.path.dirname(__file__), 'NN.weights.h5')
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'NN_new.weights.h5')
 LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
+
+LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
 
 def huberloss(y_true, y_pred):
     err = y_true - y_pred
@@ -23,7 +26,7 @@ def huberloss(y_true, y_pred):
     return tf.reduce_mean(loss)
 
 class ExperienceBuffer:
-    def __init__(self, buffer_size=10000):
+    def __init__(self, buffer_size=20000):
         # ※ deque は最大長を超えた場合に自動で捨ててくれる
         self.buffer = deque(maxlen=buffer_size)
 
@@ -39,7 +42,7 @@ class ExperienceBuffer:
         return len(self.buffer)
 
 class DQN:
-    def __init__(self, input_size: int, output_size: int, discount=0.90, epsilon=1.0, epsilon_min=0.0001, epsilon_decay=0.9995) -> None:
+    def __init__(self, input_size: int, output_size: int, discount=0.9, epsilon=0.50, epsilon_min=0.0001, epsilon_decay=0.999) -> None:
         super().__init__()
         self.discount = discount # 割引率
         self.epsilon = epsilon # ε-greedy法 の ε
@@ -54,21 +57,22 @@ class DQN:
             Dense(64, activation='relu'),
             Dense(output_size, activation='linear')
         ])
-        self.optimizer = Adam(learning_rate=0.00001)
+        self.optimizer = Adam(learning_rate=0.001)
         self.model.compile(loss=huberloss, optimizer=self.optimizer)
     
-    def act(self, state: np.ndarray, possible_actions: list) -> Union[int, Tuple[int, int]]:
+    def act(self, possible_states: list) -> Union[int, Tuple[int, int]]:
         # 状態から最適な行動を選択
         # action_mode = 0 : 0, 1, 2, 3, 4, 5, 6
         # action_mode = 1 : (y, rotate) => 
         # ※ 厳密にやるなら action_mode によって分岐させるべき(?)
 
         if random.random() < self.epsilon: # ε-greedy法
-            return random.choice(possible_actions)
+            return random.choice(possible_states)[0]
         else:
-            rating = self.model.predict(state.reshape(1, -1), verbose=0)[0]
-            action = np.argmax(rating)
-            return (action % 9, action // 9)
+            states = [state for _, state in possible_states]
+            rating = self.model.predict(np.array(states), verbose=0)
+            action = possible_states[np.argmax(rating)][0]
+            return action
         
     def train(self, env: Env, episodes=1):
         # 統計情報として、エピソードごとの報酬とステップ数を保存
@@ -81,11 +85,20 @@ class DQN:
             total_reward = 0
 
             while not done:
-                possible_actions = env.get_possible_actions()
-                action = self.act(state, possible_actions) # 行動を選択 (ε-greedy法)
+                possible_states = env.get_possible_states()
+                action = self.act(possible_states) # 行動を選択 (ε-greedy法)
 
                 next_state, reward, done, _, _ = env.step(action) # 行動を実行
                 self.experience_buffer.add((state, action, reward, next_state, done))
+
+                if reward >= LINE_CLEAR_SCORE[4]: # Line Clear 時
+                    print("★★★★★★★★★★ 4 Line Clear! ★★★★★★★★★★")
+                elif reward >= LINE_CLEAR_SCORE[3]:
+                    print("★★★★★★★★★★ 3 Line Clear! ★★★★★★★★★★")
+                elif reward >= LINE_CLEAR_SCORE[2]:
+                    print("★★★★★★★★★★ 2 Line Clear! ★★★★★★★★★★")
+                elif reward >= LINE_CLEAR_SCORE[1]:
+                    print("★★★★★★★★★★ 1 Line Clear! ★★★★★★★★★★")
 
                 state = next_state
                 total_reward += reward
@@ -97,7 +110,7 @@ class DQN:
             self.learn()
         return [steps, rewards]
     
-    def learn(self, batch_size=32, epochs=1):
+    def learn(self, batch_size=128, epochs=32):
         if len(self.experience_buffer.buffer) < batch_size:
             return 
 
@@ -106,38 +119,38 @@ class DQN:
 
         # バッチ内の状態に対する予測を一括して計算
         states = np.array([sample[0] for sample in batch])
-        targets = self.model.predict(states)
+        targets = self.model.predict(states, batch_size=batch_size)
         next_states = np.array([sample[3] for sample in batch])
         next_targets = self.model.predict(next_states)
-        print("Buffer length:", self.experience_buffer.len())
 
-        # 最初のデータの argmax とその行動価値関数 Q(s, a) を表示
-        action_idx = np.argmax(targets[0])
-        action_value = targets[0][action_idx]
-        print(f"Action value for the first sample: Action index = {action_idx}, Value = {action_value}")
+        # batch 内で最も高い報酬の期待値 Q(s, a) と即時報酬 r を表示
+        # idx: 最も高い報酬の期待値のインデックス
+        idx = np.argmax([sample[2] for sample in batch])  # 3番目の要素の中で最大値のインデックスを取得
+        print(f"Immediate max reward: {batch[idx][2]}")
+        print(f"Action max value for the first sample: {targets[idx]}")
+        print(f"The action is {batch[idx][1]}")
 
         for i, (_, action, reward, _, done) in enumerate(batch):
             action = action[0] + action[1] * 9
             if done:
-                targets[i][action] = reward
+                targets[i] = reward
             else:
-                targets[i][action] = reward + self.discount * np.max(next_targets[i])
+                targets[i] = reward + self.discount * next_targets[i]
 
         # 学習
         self.model.fit(states, targets, batch_size=batch_size, epochs=epochs, verbose=0)
-        # 学習後に今の推測値を表示
-        # targets = self.model.predict(states)
-        # action_idx = np.argmax(targets[0])
-        # action_value = targets[0][action_idx]
-        # print(f"Action value for the first sample after learning: Action index = {action_idx}, Value = {action_value}")
+
+        # 学習後に再度 batch 内で最も高い報酬の期待値 Q(s, a) を表示
+        targets = self.model.predict(states, batch_size=batch_size, verbose=0)
+        print(f"Action max value for the first sample after learning: {targets[idx]}\n")
 
         # 学習させる度に ε を減衰
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 
     def save(self) -> None:
-        if Path(WEIGHT_PATH).is_file():
-            self.model.save(WEIGHT_PATH)
+        if Path(WEIGHT_OUT_PATH).is_file():
+            self.model.save_weights(WEIGHT_OUT_PATH)
 
     def load(self) -> None:
-        if Path(WEIGHT_PATH).is_file():
-            self.model = load_model(WEIGHT_PATH)
+        if Path(WEIGHT_IN_PATH).is_file():
+            self.model.load_weights(WEIGHT_IN_PATH)
