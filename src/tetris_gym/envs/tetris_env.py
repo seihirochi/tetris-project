@@ -30,8 +30,8 @@ class TetrisEnv(gym.Env):
             self.action_space = gym.spaces.Discrete(8)
         elif action_mode == 1:
             self.action_space = gym.spaces.Tuple((
-                gym.spaces.Discrete(width-1), # Y
-                gym.spaces.Discrete(4),     # Rotation
+                gym.spaces.Discrete(width), # Y (-1 ~ width-1)
+                gym.spaces.Discrete(4),     # Rotation (0 ~ 3)
             ))
             
     def get_possible_states(self):

@@ -5,43 +5,71 @@ from tetris_gym import Action, Mino
 
 mino_I = Mino(
     1,
-    np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]),
+    np.array([
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0]
+    ]),
     color("　", back="cyan"),
 )
 
 mino_J = Mino(
     2,
-    np.array([[0, 1, 1], [0, 1, 0], [0, 1, 0]]),
+    np.array([
+        [0, 1, 1],
+        [0, 1, 0],
+        [0, 1, 0]
+    ]),
     color("　", back="blue"),
 )
 
 mino_L = Mino(
     3,
-    np.array([[0, 1, 0], [0, 1, 0], [0, 1, 1]]),
+    np.array([
+        [0, 1, 0],
+        [0, 1, 0],
+        [0, 1, 1]
+    ]),
     color("　", back="orange"),
 )
 
 mino_O = Mino(
     4,
-    np.array([[1, 1], [1, 1]]),
+    np.array([
+        [1, 1],
+        [1, 1]
+    ]),
     color("　", back="yellow"),
 )
 
 mino_S = Mino(
     5,
-    np.array([[0, 1, 0], [0, 1, 1], [0, 0, 1]]),
+    np.array([
+        [0, 1, 0],
+        [0, 1, 1],
+        [0, 0, 1]
+    ]),
     color("　", back="green"),
 )
 
 mino_T = Mino(
     6,
-    np.array([[0, 1, 0], [0, 1, 1], [0, 1, 0]]),
+    np.array([
+        [0, 1, 0],
+        [0, 1, 1],
+        [0, 1, 0]
+    ]),
     color("　", back="magenta"),
 )
 
 mino_Z = Mino(
     7,
-    np.array([[0, 0, 1], [0, 1, 1], [0, 1, 0]]),
+    np.array([
+        [0, 0, 1],
+        [0, 1, 1],
+        [0, 1, 0]
+    ]),
     color("　", back="red"),
 )
 

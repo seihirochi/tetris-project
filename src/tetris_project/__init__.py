@@ -39,6 +39,7 @@ def train():
     output_size = 1 # 状態における今後の報酬の期待値を推定
     agent = DQN(input_size, output_size)
     agent.load() # 途中経過をロード
+    # agent.model.summary()
     
     running = True
     total_games = 0
@@ -71,8 +72,6 @@ def simulate():
     output_size = 1 # 状態における今後の報酬の期待値を推定
     agent = DQN(input_size, output_size, epsilon=0.0, epsilon_decay=0.0, epsilon_min=0.0)
     agent.load() # 途中経過をロード
-    # agent.save()
-
     # agent.model.summary()
 
     running = True

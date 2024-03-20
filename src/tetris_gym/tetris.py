@@ -141,7 +141,10 @@ class Tetris:
             # ※ 現在は train として使わないので一旦スルー
             pass
         elif self.action_mode == 1:
-            for y in range(self.board.width):
+            # (-1 ~ width-1, 0 ~ 3) の組
+            # ※ mino の仕様上 origin が (x,-1) に来ることあり
+            # for y in range(self.board.width):
+            for y in range(-1, self.board.width):
                 for rotate in range(4):
                     # 行動出来るかを確認
                     # ※ 本来ここは deepcopy ではなく差分更新で高速化すべき

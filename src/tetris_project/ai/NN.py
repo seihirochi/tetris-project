@@ -11,8 +11,8 @@ from keras.layers import Dense
 from keras.models import Sequential, load_model, save_model
 from keras.optimizers import Adam
 
-WEIGHT_IN_PATH = os.path.join(os.path.dirname(__file__), 'NN.weights.h5')
-WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'NN_new.weights.h5')
+WEIGHT_IN_PATH = os.path.join(os.path.dirname(__file__), './param/NN_(0~8).weights.h5')
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'NN_out.weights.h5')
 LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
 
 LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
@@ -128,10 +128,9 @@ class DQN:
         idx = np.argmax([sample[2] for sample in batch])  # 3番目の要素の中で最大値のインデックスを取得
         print(f"Immediate max reward: {batch[idx][2]}")
         print(f"Action max value for the first sample: {targets[idx]}")
-        print(f"The action is {batch[idx][1]}")
 
         for i, (_, action, reward, _, done) in enumerate(batch):
-            action = action[0] + action[1] * 9
+            action = action[0] + action[1] * 10
             if done:
                 targets[i] = reward
             else:
