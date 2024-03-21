@@ -152,6 +152,10 @@ class Tetris:
                     flag = Tetris_copy.move_and_rotate_and_drop(y, rotate)
                     if flag:
                         actions.append(((y, rotate), Tetris_copy.observe()))
+            Tetris_copy = copy.deepcopy(self)
+            if Tetris_copy.hold():
+                # hold が可能なら hold する
+                actions.append(((0, 4), Tetris_copy.observe()))
         return actions
     
     def observe(self) -> np.ndarray:
@@ -172,7 +176,8 @@ class Tetris:
             self.current_mino_state.mino.to_tensor().flatten(),
             np.concatenate(
                 [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
-            )
+            ),
+            self.hold_mino.mino.to_tensor().flatten(),
         ])
 
         return np.concatenate(

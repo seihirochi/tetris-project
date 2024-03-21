@@ -16,12 +16,11 @@ class TetrisEnv(gym.Env):
         self.minos = minos
         self.action_mode = action_mode
 
-        # Dellacherie's algorithm.
+        # Dellacherie's algorithm
         self.observation_space = gym.spaces.MultiDiscrete(
-            # [2] * height*width +               # board
-            [self.height * self.width] * 9 + # board の特徴量
+            [self.height * self.width] * 9 +   # board の特徴量
             [len(minos)+1] +                   # current mino
-            # [len(minos)+1] +                 # hold mino
+            [len(minos)+1] +                   # hold mino
             [len(minos)+1] * NEXT_MINO_NUM     # next minos
         )
 
@@ -31,7 +30,7 @@ class TetrisEnv(gym.Env):
         elif action_mode == 1:
             self.action_space = gym.spaces.Tuple((
                 gym.spaces.Discrete(width), # Y (-1 ~ width-1)
-                gym.spaces.Discrete(4),     # Rotation (0 ~ 3)
+                gym.spaces.Discrete(5),     # Rotation (0 ~ 3: rotate, 4: hold)
             ))
             
     def get_possible_states(self):
@@ -75,7 +74,10 @@ class TetrisEnv(gym.Env):
         elif self.action_mode == 1:
             y, rotate = action
             # print(f"\ny: {y}, rotate: {rotate}")
-            self.tetris.move_and_rotate_and_drop(y, rotate)
+            if rotate >= 4:
+                self.tetris.hold()
+            else:
+                self.tetris.move_and_rotate_and_drop(y, rotate)
 
         # このターンで得た報酬
         reward = self.tetris.score - prev_score

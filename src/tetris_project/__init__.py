@@ -33,33 +33,35 @@ def train():
     env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS, action_mode=1)
     env.reset()
 
-    # env から input と output の次元を取得
+    # input: 状態特徴量
+    # output: 今後の報酬の期待値
     input_size = env.observation_space.shape[0]
-    # output_size = env.action_space.spaces[0].n * env.action_space.spaces[1].n
-    output_size = 1 # 状態における今後の報酬の期待値を推定
+    output_size = 1
     agent = DQN(input_size, output_size)
-    agent.load() # 途中経過をロード
-    # agent.model.summary()
+    
+    # 既存の重みを load する場合はファイル名を指定
+    agent.load("NN1_hold.weights.h5")
     
     running = True
     total_games = 0
     total_steps = 0
-    while running:
-        steps, rewards = agent.train(env, episodes=25)
+    while agent.epsilon >= 0.05 and running:
+        steps, rewards = agent.train(env, episodes=1)
         total_games += len(rewards)
         total_steps += steps
         agent.save() # 途中経過を保存
+
         print(env.render())
         print("==================")
-        print("* Total Games: ", total_games, "       ")
-        print("* Total Steps: ", total_steps, "       ")
-        print("* Epsilon: ", agent.epsilon, "       ")
+        print("* Total Games: ", total_games)
+        print("* Total Steps: ", total_steps)
+        print("* Epsilon: ", agent.epsilon)
         print("*")
-        print("* Average: ", sum(rewards) / len(rewards), "       ")
-        print("* Median: ", median(rewards), "       ")
-        print("* Mean: ", mean(rewards), "       ")
-        print("* Min: ", min(rewards), "       ")
-        print("* Max: ", max(rewards), "       ")
+        print("* Average: ", sum(rewards) / len(rewards))
+        print("* Median: ", median(rewards))
+        print("* Mean: ", mean(rewards))
+        print("* Min: ", min(rewards))
+        print("* Max: ", max(rewards))
         print("==================")
 
 def simulate():
@@ -68,11 +70,11 @@ def simulate():
 
     # env から input と output の次元を取得
     input_size = env.observation_space.shape[0]
-    # output_size = env.action_space.spaces[0].n * env.action_space.spaces[1].n
     output_size = 1 # 状態における今後の報酬の期待値を推定
     agent = DQN(input_size, output_size, epsilon=0.0, epsilon_decay=0.0, epsilon_min=0.0)
-    agent.load() # 途中経過をロード
-    # agent.model.summary()
+
+    # 既存の重みを load する場合はファイル名を指定 
+    agent.load("NN1_hold.weights.h5")  
 
     running = True
     while running:

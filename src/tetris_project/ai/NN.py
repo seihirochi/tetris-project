@@ -8,11 +8,10 @@ import numpy as np
 import tensorflow as tf
 from gymnasium import Env
 from keras.layers import Dense
-from keras.models import Sequential, load_model, save_model
+from keras.models import Sequential
 from keras.optimizers import Adam
 
-WEIGHT_IN_PATH = os.path.join(os.path.dirname(__file__), './param/NN_(0~8).weights.h5')
-WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'NN_out.weights.h5')
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'out.weights.h5')
 LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
 
 LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
@@ -27,7 +26,6 @@ def huberloss(y_true, y_pred):
 
 class ExperienceBuffer:
     def __init__(self, buffer_size=20000):
-        # ※ deque は最大長を超えた場合に自動で捨ててくれる
         self.buffer = deque(maxlen=buffer_size)
 
     def add(self, experience):
@@ -110,7 +108,7 @@ class DQN:
             self.learn()
         return [steps, rewards]
     
-    def learn(self, batch_size=128, epochs=32):
+    def learn(self, batch_size=128, epochs=16):
         if len(self.experience_buffer.buffer) < batch_size:
             return 
 
@@ -150,6 +148,7 @@ class DQN:
         if Path(WEIGHT_OUT_PATH).is_file():
             self.model.save_weights(WEIGHT_OUT_PATH)
 
-    def load(self) -> None:
-        if Path(WEIGHT_IN_PATH).is_file():
-            self.model.load_weights(WEIGHT_IN_PATH)
+    def load(self, path: str) -> None:
+        path = os.path.join(os.path.dirname(__file__), "param", path)
+        if Path(path).is_file():
+            self.model.load_weights(path)
