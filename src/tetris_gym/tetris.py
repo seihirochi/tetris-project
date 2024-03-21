@@ -210,6 +210,26 @@ class Tetris:
                 self.current_mino_state.move(1, 0, self.board.board)
             self.place()
 
+    def hard_drop_step(self, actionId: int) -> None:
+        (move, rotate) = divmod(actionId, 4)
+        move -= 5
+        rotate -= 2
+        if move < 0:
+            for _ in range(abs(move)):
+                self.current_mino_state.move(0, -1, self.board.board)
+        elif move > 0:
+            for _ in range(move):
+                self.current_mino_state.move(0, 1, self.board.board)
+        if rotate <= 0:
+            for _ in range(abs(rotate)):
+                self.current_mino_state.rotate_left(self.board.board)
+        else:
+            for _ in range(rotate):
+                self.current_mino_state.rotate_right(self.board.board)
+        while not self.is_mino_landed():
+            self.current_mino_state.move(1, 0, self.board.board)
+        self.place()
+
     def render(self) -> str:
         all_fields = []
         s = EDGE_CHAR * (self.board.width + 2 * WALL_WIDTH)

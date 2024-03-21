@@ -82,3 +82,10 @@ HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP = {
     "q": action_HOLD,
     "w": action_HARD_DROP,
 }
+
+ALL_HARDDROP_ACTIONS = set()
+
+for i in range(11):
+    for j in range(4):
+        action = Action(i * 4 + j, f"hard drop, move to {i}, rotate {j} times")
+        ALL_HARDDROP_ACTIONS.add(action)
