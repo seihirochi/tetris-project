@@ -1,7 +1,11 @@
 from tetris_gym import Tetris
 
-from .config import (HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS)
+from .config import (
+    HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
+    ORDINARY_TETRIS_ACTIONS,
+    ORDINARY_TETRIS_MINOS,
+    ALL_HARDDROP_ACTIONS,
+)
 from .controller import DQN, DQNTrainerController, HumanController
 
 
@@ -26,10 +30,10 @@ def start():
 
 def train():
     epoch = 5000
-    game = Tetris(20, 10, ORDINARY_TETRIS_MINOS, ORDINARY_TETRIS_ACTIONS)
+    game = Tetris(20, 10, ORDINARY_TETRIS_MINOS, ALL_HARDDROP_ACTIONS)
     state = game.observe()
-    model = DQN(state.size, len(ORDINARY_TETRIS_ACTIONS))
-    controller = DQNTrainerController(ORDINARY_TETRIS_ACTIONS, model, 0.1)
+    model = DQN(state.size, len(ALL_HARDDROP_ACTIONS))
+    controller = DQNTrainerController(ALL_HARDDROP_ACTIONS, model, 0.1)
     rewards = []
     # 累積報酬の割引率
     gamma = 0.9
@@ -39,7 +43,7 @@ def train():
         prev_rewards = 0
         while game.game_over is False:
             action = controller.get_action(state)
-            game.step(action.id)
+            game.hard_drop_step(action.id)
             next_state = game.observe()
             reward = controller.evaluate(next_state)
             reward = reward + gamma * prev_rewards

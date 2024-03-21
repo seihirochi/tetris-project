@@ -87,6 +87,8 @@ class Tetris:
         for mino in add_permutation:
             self.mino_permutation.append(mino)
 
+        self.next_mino_num = min(NEXT_MINO_NUM, len(self.mino_permutation))
+
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
@@ -208,6 +210,26 @@ class Tetris:
                 self.current_mino_state.move(1, 0, self.board.board)
             self.place()
 
+    def hard_drop_step(self, actionId: int) -> None:
+        (move, rotate) = divmod(actionId, 4)
+        move -= 5
+        rotate -= 2
+        if move < 0:
+            for _ in range(abs(move)):
+                self.current_mino_state.move(0, -1, self.board.board)
+        elif move > 0:
+            for _ in range(move):
+                self.current_mino_state.move(0, 1, self.board.board)
+        if rotate <= 0:
+            for _ in range(abs(rotate)):
+                self.current_mino_state.rotate_left(self.board.board)
+        else:
+            for _ in range(rotate):
+                self.current_mino_state.rotate_right(self.board.board)
+        while not self.is_mino_landed():
+            self.current_mino_state.move(1, 0, self.board.board)
+        self.place()
+
     def render(self) -> str:
         all_fields = []
         s = EDGE_CHAR * (self.board.width + 2 * WALL_WIDTH)
@@ -238,7 +260,7 @@ class Tetris:
         # Next mino 描画 (4個まで)
         all_fields[0] += VOID_CHAR + "Ｎｅｘｔ" + VOID_CHAR
         now_line = 1
-        for i in range(NEXT_MINO_NUM):
+        for i in range(self.next_mino_num):
             all_fields[now_line] += VOID_CHAR * NEXT_MINO_LIST_WIDTH
             now_line += 1  # 空行
 
