@@ -18,7 +18,6 @@ NEXT_MINO_NUM = 3
 NEXT_MINO_LIST_WIDTH = 6
 LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
 
-
 class Tetris:
     def __init__(
         self, height: int, width: int, minos: set[Mino], action_mode=0
@@ -169,7 +168,7 @@ class Tetris:
             np.concatenate(
                 [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
             ),
-            # self.hold_mino.mino.to_tensor().flatten(),
+            self.hold_mino.mino.to_tensor().flatten(),
         ])
 
     def get_hole_count(self) -> int:

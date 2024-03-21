@@ -3,6 +3,9 @@ from colr import color
 
 from tetris_gym import Action, Mino
 
+TETRIS_WIDTH = 10
+TETRIS_HEIGHT = 20
+
 mino_I = Mino(
     1,
     np.array([
@@ -110,3 +113,10 @@ HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP = {
     "q": action_HOLD,
     "w": action_HARD_DROP,
 }
+
+# action_mode = 1 用の action
+ORDINARY_TETRIS_ACTIONS_V2 = [
+    Action.from_values(y, rotate, False, width=TETRIS_WIDTH) for y in range(-1, TETRIS_WIDTH-1) for rotate in range(4)
+] + [
+    Action.from_values(0, 0, True, width=TETRIS_WIDTH)
+]

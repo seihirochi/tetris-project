@@ -19,8 +19,8 @@ class TetrisEnv(gym.Env):
         self.observation_space = gym.spaces.MultiDiscrete(
             [self.height * self.width] * 9 +   # board の特徴量 (Dellacherie's Algorithm)
             [len(minos)+1] +                   # current mino
-            [len(minos)+1] * NEXT_MINO_NUM     # next minos
-            # [len(minos)+1] +                   # hold mino
+            [len(minos)+1] * NEXT_MINO_NUM +   # next minos
+            [len(minos)+1]                     # hold mino
         )
 
         if action_mode == 0:
@@ -66,7 +66,7 @@ class TetrisEnv(gym.Env):
                 self.tetris.place()
         elif self.action_mode == 1:
             y, rotate, hold_flag = action.convert_to_tuple(self.tetris.board.width)
-            print(y, rotate, hold_flag)
+            # print(y, rotate, hold_flag)
             if hold_flag:
                 self.tetris.hold()
             else:

@@ -11,10 +11,10 @@ from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
 
-WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'out.weights.h5')
-LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
+from tetris_gym import LINE_CLEAR_SCORE, Action, Tetris
+from tetris_project.controller import Controller
 
-LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'out.weights.h5')
 
 def huberloss(y_true, y_pred):
     err = y_true - y_pred
@@ -39,16 +39,10 @@ class ExperienceBuffer:
     def len(self) -> int:
         return len(self.buffer)
 
-class DQN:
-    def __init__(self, input_size: int, output_size: int, discount=0.9, epsilon=0.50, epsilon_min=0.0001, epsilon_decay=0.999) -> None:
+class NN:
+    def __init__(self, input_size: int, output_size: int) -> None:
         super().__init__()
-        self.discount = discount # 割引率
-        self.epsilon = epsilon # ε-greedy法 の ε
-        self.epsilon_min = epsilon_min # ε-greedy法 の ε の最小値
-        self.epsilon_decay = epsilon_decay # ε-greedy法 の ε の減衰率
-
-        self.experience_buffer = ExperienceBuffer()
-
+        
         # 3層のニューラルネットワーク
         self.model = Sequential([
             Dense(128, input_shape=(input_size,), activation='relu'),
@@ -56,14 +50,37 @@ class DQN:
             Dense(output_size, activation='linear')
         ])
         self.optimizer = Adam(learning_rate=0.001)
-        self.model.compile(loss=huberloss, optimizer=self.optimizer)
-    
-    def act(self, possible_states: list) -> Union[int, Tuple[int, int]]:
-        # 状態から最適な行動を選択
-        # action_mode = 0 : 0, 1, 2, 3, 4, 5, 6
-        # action_mode = 1 : (y, rotate) => 
-        # ※ 厳密にやるなら action_mode によって分岐させるべき(?)
+        self.model.compile(loss=huberloss, optimizer=self.optimizer)    
 
+    def save(self) -> None:
+        if Path(WEIGHT_OUT_PATH).is_file():
+            self.model.save_weights(WEIGHT_OUT_PATH)
+
+    def load(self, path: str) -> None:
+        path = os.path.join(os.path.dirname(__file__), "param", path)
+        if Path(path).is_file():
+            self.model.load_weights(path)
+
+class NNTrainerController(Controller):
+    def __init__(self,
+                 actions: set[Action],
+                 model,
+                 discount=0.95,
+                 epsilon=0.50,
+                 epsilon_min=0.0001,
+                 epsilon_decay=0.999
+        ) -> None:
+        super().__init__(actions)
+        self.model = model
+        self.discount = discount # 割引率
+        self.epsilon = epsilon # ε-greedy法 の ε
+        self.epsilon_min = epsilon_min # ε-greedy法 の ε の最小値
+        self.epsilon_decay = epsilon_decay # ε-greedy法 の ε の減衰率
+        self.experience_buffer = ExperienceBuffer() # Experience Replay Buffer
+
+    def get_action(self, env: Env) -> Action:
+        possible_states = env.unwrapped.get_possible_states()
+        # 状態から最適な行動を選択
         if random.random() < self.epsilon: # ε-greedy法
             return random.choice(possible_states)[0]
         else:
@@ -71,7 +88,7 @@ class DQN:
             rating = self.model.predict(np.array(states), verbose=0)
             action = possible_states[np.argmax(rating)][0]
             return action
-        
+            
     def train(self, env: Env, episodes=1):
         # 統計情報
         rewards = []
@@ -83,7 +100,7 @@ class DQN:
             total_reward = 0
             while not done:
                 possible_states = env.unwrapped.get_possible_states()
-                action = self.act(possible_states) # 行動を選択 (ε-greedy法)
+                action = self.get_action(env) # 行動を選択 (ε-greedy法)
                 next_state, reward, done, _, _ = env.step(action) # 行動を実行
                 self.experience_buffer.add((state, action, reward, next_state, done))
 
@@ -140,11 +157,15 @@ class DQN:
         # 学習させる度に ε を減衰
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 
-    def save(self) -> None:
-        if Path(WEIGHT_OUT_PATH).is_file():
-            self.model.save_weights(WEIGHT_OUT_PATH)
+class NNPlayerController(Controller):
+    def __init__(self, actions: set[Action], model) -> None:
+        super().__init__(actions)
+        self.model = model
 
-    def load(self, path: str) -> None:
-        path = os.path.join(os.path.dirname(__file__), "param", path)
-        if Path(path).is_file():
-            self.model.load_weights(path)
+    def get_action(self, env: Env) -> Action:
+        possible_states = env.unwrapped.get_possible_states()
+        # 状態から最適行動を選択
+        states = [state for _, state in possible_states]
+        rating = self.model.predict(np.array(states), verbose=0)
+        action = possible_states[np.argmax(rating)][0]
+        return action

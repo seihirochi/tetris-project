@@ -3,79 +3,80 @@ from statistics import mean, median
 
 import gymnasium as gym
 
-from .ai.NN import DQN
+from .ai import NN, NNPlayerController, NNTrainerController
 from .config import (HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS)
+                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_ACTIONS_V2,
+                     ORDINARY_TETRIS_MINOS, TETRIS_HEIGHT, TETRIS_WIDTH)
 from .controller import HumanController
-
-# from tetris_gym import Tetris
 
 
 def overwrite_print(text, line):
     print("\033[{};0H\033[K{}".format(line + 1, text))
 
 
-# def start():
-#     env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS)
-#     env.reset()
-
-#     controller = HumanController(
-#         ORDINARY_TETRIS_ACTIONS,
-#         HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-#     )
-
-#     while game.game_over is False:
-#         overwrite_print(game.render(), 0)
-#         action = controller.get_action()
-#         game.step(action.id)
-
-#     # Game Over
-#     overwrite_print(game.render(), 0)
-
-
 def start():
-    env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS)
+    env = gym.make(
+        "tetris-v1",
+        height=TETRIS_HEIGHT,
+        width=TETRIS_WIDTH,
+        minos=ORDINARY_TETRIS_MINOS,
+        action_mode=0
+    )
     env.reset()
     done = False
+    controller = HumanController(
+        ORDINARY_TETRIS_ACTIONS,
+        HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
+    )
     while not done:
-        print(env.render())
-        command = input("Enter action:")
-        # command が action に無い場合は無視
-        if command not in HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP:
-            continue
-        action = HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP[command].id
+        overwrite_print(env.render(), 0)
+        action = controller.get_action(env)
         _, _, done, _, _ = env.step(action)
     # GameOver
     print(env.render())
 
 
 def train():
-    env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS, action_mode=1)
+    env = gym.make(
+        "tetris-v1",
+        height=TETRIS_HEIGHT,
+        width=TETRIS_WIDTH,
+        minos=ORDINARY_TETRIS_MINOS,
+        action_mode=1
+    )
     env.reset()
 
     # input: 状態特徴量
     # output: 今後の報酬の期待値
     input_size = env.observation_space.shape[0]
     output_size = 1
-    agent = DQN(input_size, output_size)
+    model = NN(input_size, output_size)
+    controller = NNTrainerController(
+        ORDINARY_TETRIS_ACTIONS_V2,
+        model.model,
+        discount=0.95,
+        epsilon=0.50,
+        epsilon_min=0.0001,
+        epsilon_decay=0.999
+    )
     
     # 既存の重みを load する場合はファイル名を指定
-    # agent.load("NN1_hold.weights.h5")
+    # model.load("NN1_hold.weights.h5")
     
     running = True
     total_games = 0
     total_steps = 0
     while running:
-        steps, rewards = agent.train(env, episodes=1)
+        steps, rewards = controller.train(env, episodes=20)
         total_games += len(rewards)
         total_steps += steps
-        agent.save() # 途中経過を保存
+        model.save() # 途中経過を保存
 
         print(env.render())
         print("==================")
         print("* Total Games: ", total_games)
         print("* Total Steps: ", total_steps)
-        print("* Epsilon: ", agent.epsilon)
+        print("* Epsilon: ", controller.epsilon)
         print("*")
         print("* Average: ", sum(rewards) / len(rewards))
         print("* Median: ", median(rewards))
@@ -84,26 +85,32 @@ def train():
         print("* Max: ", max(rewards))
         print("==================")
 
-def simulate():
-    env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS, action_mode=1)
-    _, _ = env.reset()
 
-    # env から input と output の次元を取得
+def simulate():
+    env = gym.make(
+        "tetris-v1",
+        height=TETRIS_HEIGHT,
+        width=TETRIS_WIDTH,
+        minos=ORDINARY_TETRIS_MINOS,
+        action_mode=1
+    )
+    env.reset()
+
+    # input: 状態特徴量
+    # output: 今後の報酬の期待値
     input_size = env.observation_space.shape[0]
-    output_size = 1 # 状態における今後の報酬の期待値を推定
-    agent = DQN(input_size, output_size, epsilon=0.0, epsilon_decay=0.0, epsilon_min=0.0)
+    output_size = 1
+    model = NN(input_size, output_size)
+    controller = NNPlayerController(ORDINARY_TETRIS_ACTIONS_V2, model.model)
 
     # 既存の重みを load する場合はファイル名を指定 
-    agent.load("NN1_hold.weights.h5")  
+    model.load("NN1_hold.weights.h5")  
 
     running = True
     while running:
-        possible_states = env.get_possible_states()
-        action = agent.act(possible_states)
+        action = controller.get_action(env)
         _, _, done, _, _ = env.step(action)
-
         print(overwrite_print(env.render(), 0))
-
         if done:
             _, _ = env.reset()
             input("Press Enter to continue...")
