@@ -5,18 +5,38 @@ import gymnasium as gym
 
 from .ai.NN import DQN
 from .config import (HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-                     ORDINARY_TETRIS_MINOS)
+                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS)
+from .controller import HumanController
+
+# from tetris_gym import Tetris
 
 
 def overwrite_print(text, line):
     print("\033[{};0H\033[K{}".format(line + 1, text))
 
 
+# def start():
+#     env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS)
+#     env.reset()
+
+#     controller = HumanController(
+#         ORDINARY_TETRIS_ACTIONS,
+#         HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
+#     )
+
+#     while game.game_over is False:
+#         overwrite_print(game.render(), 0)
+#         action = controller.get_action()
+#         game.step(action.id)
+
+#     # Game Over
+#     overwrite_print(game.render(), 0)
+
+
 def start():
     env = gym.make("tetris-v1", height=20, width=10, minos=ORDINARY_TETRIS_MINOS)
     env.reset()
     done = False
-
     while not done:
         print(env.render())
         command = input("Enter action:")
@@ -40,12 +60,12 @@ def train():
     agent = DQN(input_size, output_size)
     
     # 既存の重みを load する場合はファイル名を指定
-    agent.load("NN1_hold.weights.h5")
+    # agent.load("NN1_hold.weights.h5")
     
     running = True
     total_games = 0
     total_steps = 0
-    while agent.epsilon >= 0.05 and running:
+    while running:
         steps, rewards = agent.train(env, episodes=1)
         total_games += len(rewards)
         total_steps += steps

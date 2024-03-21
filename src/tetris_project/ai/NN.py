@@ -73,7 +73,7 @@ class DQN:
             return action
         
     def train(self, env: Env, episodes=1):
-        # 統計情報として、エピソードごとの報酬とステップ数を保存
+        # 統計情報
         rewards = []
         steps = 0
 
@@ -81,11 +81,9 @@ class DQN:
             state, _ = env.reset()
             done = False
             total_reward = 0
-
             while not done:
-                possible_states = env.get_possible_states()
+                possible_states = env.unwrapped.get_possible_states()
                 action = self.act(possible_states) # 行動を選択 (ε-greedy法)
-
                 next_state, reward, done, _, _ = env.step(action) # 行動を実行
                 self.experience_buffer.add((state, action, reward, next_state, done))
 
@@ -103,14 +101,13 @@ class DQN:
                 steps += 1
 
             rewards.append(total_reward)
-
-            # ε-greedy によって採取された経験を使って学習
             self.learn()
+
         return [steps, rewards]
     
     def learn(self, batch_size=128, epochs=16):
         if len(self.experience_buffer.buffer) < batch_size:
-            return 
+            return
 
         # 訓練データ
         batch = self.experience_buffer.sample(batch_size)
@@ -127,8 +124,7 @@ class DQN:
         print(f"Immediate max reward: {batch[idx][2]}")
         print(f"Action max value for the first sample: {targets[idx]}")
 
-        for i, (_, action, reward, _, done) in enumerate(batch):
-            action = action[0] + action[1] * 10
+        for i, (_, _, reward, _, done) in enumerate(batch):
             if done:
                 targets[i] = reward
             else:

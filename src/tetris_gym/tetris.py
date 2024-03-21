@@ -1,10 +1,11 @@
 import copy
 import random
 from collections import deque
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
 
+from .action import Action
 from .board import TetrisBoard
 from .mino import Mino
 from .mino_state import MinoState
@@ -23,18 +24,17 @@ class Tetris:
         self, height: int, width: int, minos: set[Mino], action_mode=0
     ) -> None:
         self.board = TetrisBoard(height, width, minos)
-        self.mino_permutation = deque()
-        self.minos = minos  # 全種類の mino
         self.action_mode = action_mode
+        self.minos = minos
+        self.mino_permutation = deque()
 
-        # self.hold_mino = Mino(0, np.array([[0]]), VOID_CHAR)  # hold している mino
+        self.hold_used = False  # hold の使用状況
         self.hold_mino = MinoState(
             mino=Mino(0, np.array([[0]]), VOID_CHAR),
             height=height,
             width=width,
             origin=(0, 0),
         )
-        self.hold_used = False  # 今のターンに hold したか否か
 
         self.line_total_count = 0
         self.score = 0
@@ -99,13 +99,11 @@ class Tetris:
                     != 0
                 ):
                     self.game_over = True
-    
+
     def move_and_rotate_and_drop(self, y: int, rotate: int) -> bool:
         # (y座標変位, 回転回数) -> 移動可能 flag
         prev_state = copy.deepcopy(self.current_mino_state)
         flag = True
-        # print("Start!")
-
         # move y
         while y != self.current_mino_state.origin[1]:
             if y < self.current_mino_state.origin[1]:
@@ -115,7 +113,6 @@ class Tetris:
             if not flag:
                 self.current_mino_state = prev_state
                 return False
-        # print("Move y done!")
         # rotate
         while rotate > 0:
             flag = self.current_mino_state.rotate_left(self.board.board)
@@ -123,17 +120,13 @@ class Tetris:
             if not flag:
                 self.current_mino_state = prev_state
                 return False
-        # print("Rotate done!")
         # drop
         while flag:
             flag = self.current_mino_state.move(1, 0, self.board.board)
-        # print("last origin:", self.current_mino_state.origin)
         self.place()
-        # print("Place done!")
-        # print()
         return True
     
-    def get_possible_states(self) -> List[Tuple[Union[int, list]]]:
+    def get_possible_states(self) -> List[Tuple[Action, np.ndarray]]:
         # List( Tuple( 可能な行動, その状態 )) を返す
         actions = []
         if self.action_mode == 0:
@@ -141,26 +134,25 @@ class Tetris:
             # ※ 現在は train として使わないので一旦スルー
             pass
         elif self.action_mode == 1:
-            # (-1 ~ width-1, 0 ~ 3) の組
-            # ※ mino の仕様上 origin が (x,-1) に来ることあり
-            # for y in range(self.board.width):
             for y in range(-1, self.board.width):
                 for rotate in range(4):
-                    # 行動出来るかを確認
-                    # ※ 本来ここは deepcopy ではなく差分更新で高速化すべき
                     Tetris_copy = copy.deepcopy(self)
                     flag = Tetris_copy.move_and_rotate_and_drop(y, rotate)
                     if flag:
-                        actions.append(((y, rotate), Tetris_copy.observe()))
+                        actions.append((
+                            Action.from_values(y, rotate, False, self.board.width),
+                            Tetris_copy.observe()
+                        ))
             Tetris_copy = copy.deepcopy(self)
             if Tetris_copy.hold():
                 # hold が可能なら hold する
-                actions.append(((0, 4), Tetris_copy.observe()))
+                actions.append((
+                    Action.from_values(0, 0, True, self.board.width),
+                    Tetris_copy.observe()
+                ))
         return actions
     
     def observe(self) -> np.ndarray:
-        # observe を単なる盤面にすると複雑で学習困難
-        # ⇒ Dellacherie’s Algorithm
         return np.concatenate([
             [
                 self.line_total_count,
@@ -177,19 +169,8 @@ class Tetris:
             np.concatenate(
                 [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
             ),
-            self.hold_mino.mino.to_tensor().flatten(),
+            # self.hold_mino.mino.to_tensor().flatten(),
         ])
-
-        return np.concatenate(
-            [
-                self.board.to_tensor().flatten(),
-                self.current_mino_state.mino.to_tensor().flatten(),
-                # self.hold_mino.mino.to_tensor().flatten(),
-                np.concatenate(
-                    [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
-                )
-            ]
-        )
 
     def get_hole_count(self) -> int:
         # ========== hole_count ========== #
