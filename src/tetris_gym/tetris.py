@@ -87,6 +87,8 @@ class Tetris:
         for mino in add_permutation:
             self.mino_permutation.append(mino)
 
+        self.next_mino_num = min(NEXT_MINO_NUM, len(self.mino_permutation))
+
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
@@ -238,7 +240,7 @@ class Tetris:
         # Next mino 描画 (4個まで)
         all_fields[0] += VOID_CHAR + "Ｎｅｘｔ" + VOID_CHAR
         now_line = 1
-        for i in range(NEXT_MINO_NUM):
+        for i in range(self.next_mino_num):
             all_fields[now_line] += VOID_CHAR * NEXT_MINO_LIST_WIDTH
             now_line += 1  # 空行
 
