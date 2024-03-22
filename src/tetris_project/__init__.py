@@ -60,8 +60,8 @@ def train():
         epsilon_decay=0.999
     )
     
-    # 既存の重みを load する場合はファイル名を指定
-    # model.load("NN1_hold.weights.h5")
+    # 既存の parametor を load する場合はファイル名指定
+    # model.load("param/NN1_hold.weights.h5")
     
     running = True
     total_games = 0
@@ -103,8 +103,8 @@ def simulate():
     model = NN(input_size, output_size)
     controller = NNPlayerController(ORDINARY_TETRIS_ACTIONS_V2, model.model)
 
-    # 既存の重みを load する場合はファイル名を指定 
-    model.load("NN1_hold.weights.h5")  
+    # 既存の parametor を load する場合は param 配下のファイル名指定
+    model.load("param/NN2_hold.weights.h5")
 
     running = True
     while running:

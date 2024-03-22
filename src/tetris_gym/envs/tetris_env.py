@@ -76,7 +76,7 @@ class TetrisEnv(gym.Env):
         if self.tetris.game_over:
             reward = -1
 
-        # tuple(観測情報, 報酬, ゲーム終了フラグ, {可能な行動集合} )
+        # tuple(観測情報, 報酬, ゲーム終了フラグ, その他)
         return np.array(self.tetris.observe()), reward, self.tetris.game_over, False, {}
 
     def render(self) -> str:

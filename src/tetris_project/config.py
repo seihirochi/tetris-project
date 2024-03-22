@@ -3,6 +3,9 @@ from colr import color
 
 from tetris_gym import Action, Mino
 
+EDGE_CHAR = color("　", back="white")
+VOID_CHAR = "　"
+
 TETRIS_WIDTH = 10
 TETRIS_HEIGHT = 20
 

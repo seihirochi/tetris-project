@@ -44,7 +44,7 @@ class NN:
     def __init__(self, input_size: int, output_size: int) -> None:
         super().__init__()
 
-        # 3層のニューラルネットワーク
+        # 3 層の Neural Network
         self.model = Sequential([
             Dense(128, input_shape=(input_size,), activation='relu'),
             Dense(64, activation='relu'),
@@ -58,7 +58,7 @@ class NN:
             self.model.save_weights(WEIGHT_OUT_PATH)
 
     def load(self, path: str) -> None:
-        path = os.path.join(os.path.dirname(__file__), "param", path)
+        path = os.path.join(os.path.dirname(__file__), path)
         if Path(path).is_file():
             self.model.load_weights(path)
 

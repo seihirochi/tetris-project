@@ -5,13 +5,12 @@ from typing import List, Tuple
 
 import numpy as np
 
+from tetris_project.config import EDGE_CHAR, VOID_CHAR
+
 from .action import Action
 from .board import TetrisBoard
 from .mino import Mino
 from .mino_state import MinoState
-
-EDGE_CHAR = "\033[48;5;255m　\x1b[0m"
-VOID_CHAR = "　"
 
 WALL_WIDTH = 1
 NEXT_MINO_NUM = 3
@@ -185,6 +184,8 @@ class Tetris:
         return res
     
     def get_latest_clear_mino_heght(self) -> int:
+        # ========== latest_clear_mino_heght ========== #
+        # 直近で line 消しをしたミノの高さ
         if self.latest_clear_mino_state is None:
             return 0
         return self.board.height - self.latest_clear_mino_state.origin[0]

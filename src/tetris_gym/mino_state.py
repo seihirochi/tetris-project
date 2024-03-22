@@ -26,7 +26,7 @@ class MinoState:
 
     def rotate_left(self, field: np.array) -> bool:
         # 左回転 (時計回り)
-        prev_shape = self.mino.shape
+        prev_shape = copy.deepcopy(self.mino.shape)
         self.mino.shape = np.rot90(prev_shape)
         # invalid なら rollback
         if self.is_invalid(field):
@@ -36,7 +36,7 @@ class MinoState:
 
     def rotate_right(self, field: np.array) -> bool:
         # 右回転 (時計回り)
-        prev_shape = self.mino.shape
+        prev_shape = copy.deepcopy(self.mino.shape)
         self.mino.shape = np.rot90(prev_shape, -1)
         # invalid なら rollback
         if self.is_invalid(field):
