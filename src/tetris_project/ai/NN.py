@@ -1,3 +1,4 @@
+import copy
 import os
 import random
 from collections import deque
@@ -42,7 +43,7 @@ class ExperienceBuffer:
 class NN:
     def __init__(self, input_size: int, output_size: int) -> None:
         super().__init__()
-        
+
         # 3層のニューラルネットワーク
         self.model = Sequential([
             Dense(128, input_shape=(input_size,), activation='relu'),
@@ -63,12 +64,12 @@ class NN:
 
 class NNTrainerController(Controller):
     def __init__(self,
-                 actions: set[Action],
-                 model,
-                 discount=0.95,
-                 epsilon=0.50,
-                 epsilon_min=0.0001,
-                 epsilon_decay=0.999
+            actions: set[Action],
+            model,
+            discount=0.95,
+            epsilon=0.50,
+            epsilon_min=0.0001,
+            epsilon_decay=0.999
         ) -> None:
         super().__init__(actions)
         self.model = model
@@ -80,10 +81,9 @@ class NNTrainerController(Controller):
 
     def get_action(self, env: Env) -> Action:
         possible_states = env.unwrapped.get_possible_states()
-        # 状態から最適な行動を選択
         if random.random() < self.epsilon: # ε-greedy法
             return random.choice(possible_states)[0]
-        else:
+        else: # 最適行動
             states = [state for _, state in possible_states]
             rating = self.model.predict(np.array(states), verbose=0)
             action = possible_states[np.argmax(rating)][0]
@@ -99,7 +99,6 @@ class NNTrainerController(Controller):
             done = False
             total_reward = 0
             while not done:
-                possible_states = env.unwrapped.get_possible_states()
                 action = self.get_action(env) # 行動を選択 (ε-greedy法)
                 next_state, reward, done, _, _ = env.step(action) # 行動を実行
                 self.experience_buffer.add((state, action, reward, next_state, done))

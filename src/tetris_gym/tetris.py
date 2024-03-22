@@ -103,19 +103,19 @@ class Tetris:
         # (y座標変位, 回転回数) -> 移動可能 flag
         prev_state = copy.deepcopy(self.current_mino_state)
         flag = True
+        # rotate
+        while rotate > 0:
+            flag = self.current_mino_state.rotate_left(self.board.board)
+            rotate -= 1
+            if not flag:
+                self.current_mino_state = prev_state
+                return False
         # move y
         while y != self.current_mino_state.origin[1]:
             if y < self.current_mino_state.origin[1]:
                 flag = self.current_mino_state.move(0, -1, self.board.board)
             elif y > self.current_mino_state.origin[1]:
                 flag = self.current_mino_state.move(0, 1, self.board.board)
-            if not flag:
-                self.current_mino_state = prev_state
-                return False
-        # rotate
-        while rotate > 0:
-            flag = self.current_mino_state.rotate_left(self.board.board)
-            rotate -= 1
             if not flag:
                 self.current_mino_state = prev_state
                 return False
@@ -133,7 +133,7 @@ class Tetris:
             # ※ 現在は train として使わないので一旦スルー
             pass
         elif self.action_mode == 1:
-            for y in range(-1, self.board.width):
+            for y in range(-2, self.board.width-1):
                 for rotate in range(4):
                     Tetris_copy = copy.deepcopy(self)
                     flag = Tetris_copy.move_and_rotate_and_drop(y, rotate)

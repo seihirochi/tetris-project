@@ -55,8 +55,8 @@ def train():
         ORDINARY_TETRIS_ACTIONS_V2,
         model.model,
         discount=0.95,
-        epsilon=0.50,
-        epsilon_min=0.0001,
+        epsilon=1.00,
+        epsilon_min=0.01,
         epsilon_decay=0.999
     )
     

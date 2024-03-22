@@ -66,7 +66,6 @@ class TetrisEnv(gym.Env):
                 self.tetris.place()
         elif self.action_mode == 1:
             y, rotate, hold_flag = action.convert_to_tuple(self.tetris.board.width)
-            # print(y, rotate, hold_flag)
             if hold_flag:
                 self.tetris.hold()
             else:

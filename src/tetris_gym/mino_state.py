@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 
 from .mino import Mino
@@ -44,7 +46,7 @@ class MinoState:
 
     def move(self, dx: int, dy: int, field: np.array) -> bool:
         # 移動
-        prev_origin = self.origin
+        prev_origin = copy.deepcopy(self.origin)
         self.origin = (prev_origin[0] + dx, prev_origin[1] + dy)
         # invalid なら rollback
         if self.is_invalid(field):

@@ -116,7 +116,7 @@ HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP = {
 
 # action_mode = 1 用の action
 ORDINARY_TETRIS_ACTIONS_V2 = [
-    Action.from_values(y, rotate, False, width=TETRIS_WIDTH) for y in range(-1, TETRIS_WIDTH-1) for rotate in range(4)
+    Action.from_values(y, rotate, False, width=TETRIS_WIDTH) for y in range(-2, TETRIS_WIDTH-1) for rotate in range(4)
 ] + [
     Action.from_values(0, 0, True, width=TETRIS_WIDTH)
 ]
