@@ -126,3 +126,4 @@ for i in range(11):
     for j in range(4):
         action = Action(i * 4 + j, f"hard drop, move to {i}, rotate {j} times")
         ALL_HARDDROP_ACTIONS.add(action)
+ALL_HARDDROP_ACTIONS.add(Action(44, "hold"))
