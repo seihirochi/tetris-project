@@ -1,18 +1,17 @@
-import copy
 import os
 import random
 from collections import deque
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
-import tensorflow as tf
 from gymnasium import Env
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
 
-from tetris_gym import LINE_CLEAR_SCORE, Action, Tetris
+from tetris_gym import Action
+from tetris_gym.tetris import LINE_CLEAR_SCORE
 from tetris_project.controller import Controller
 
 WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'out.weights.h5')
@@ -72,8 +71,8 @@ class NNTrainerController(Controller):
         self.epsilon_decay = epsilon_decay # ε-greedy法 の ε の減衰率
         self.experience_buffer = ExperienceBuffer() # Experience Replay Buffer
 
-    def get_action(self, env: Env) -> Action:
-        possible_states = env.unwrapped.get_possible_states()
+    def get_action(self) -> Action:
+        possible_states = self.get_possible_actions()
         if random.random() < self.epsilon: # ε-greedy法
             return random.choice(possible_states)[0]
         else: # 最適行動
@@ -155,7 +154,7 @@ class NNPlayerController(Controller):
         self.model = model
 
     def get_action(self, env: Env) -> Action:
-        possible_states = env.unwrapped.get_possible_states()
+        possible_states = self.get_possible_actions(env)
         # 状態から最適行動を選択
         states = [state for _, state in possible_states]
         rating = self.model.predict(np.array(states), verbose=0)

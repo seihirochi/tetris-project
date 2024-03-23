@@ -1,13 +1,11 @@
 import copy
 import random
 from collections import deque
-from typing import List, Tuple
 
 import numpy as np
 
 from tetris_project.config import EDGE_CHAR, VOID_CHAR
 
-from .action import Action
 from .board import TetrisBoard
 from .mino import Mino
 from .mino_state import MinoState
@@ -19,10 +17,9 @@ LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
 
 class Tetris:
     def __init__(
-        self, height: int, width: int, minos: set[Mino], action_mode=0
+        self, height: int, width: int, minos: set[Mino]
     ) -> None:
         self.board = TetrisBoard(height, width, minos)
-        self.action_mode = action_mode
         self.minos = minos
         self.mino_permutation = deque()
 
@@ -40,8 +37,6 @@ class Tetris:
         # 直近で消されたミノ & 消されたライン集合
         self.latest_clear_mino_state = None
         self.latest_clear_lines = 0
-
-        self.next_mino_num = min(NEXT_MINO_NUM, len(self.mino_permutation))
 
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
@@ -124,32 +119,6 @@ class Tetris:
             flag = self.current_mino_state.move(1, 0, self.board.board)
         self.place()
         return True
-    
-    def get_possible_states(self) -> List[Tuple[Action, np.ndarray]]:
-        # List( Tuple( 可能な行動, その状態 )) を返す
-        actions = []
-        if self.action_mode == 0:
-            # actions = [1, 2, 3, 4, 5, 6, 7]
-            # ※ 現在は train として使わないので一旦スルー
-            pass
-        elif self.action_mode == 1:
-            for y in range(-2, self.board.width-1):
-                for rotate in range(4):
-                    Tetris_copy = copy.deepcopy(self)
-                    flag = Tetris_copy.move_and_rotate_and_drop(y, rotate)
-                    if flag:
-                        actions.append((
-                            Action.from_values(y, rotate, False, self.board.width),
-                            Tetris_copy.observe()
-                        ))
-            Tetris_copy = copy.deepcopy(self)
-            if Tetris_copy.hold():
-                # hold が可能なら hold する
-                actions.append((
-                    Action.from_values(0, 0, True, self.board.width),
-                    Tetris_copy.observe()
-                ))
-        return actions
     
     def observe(self) -> np.ndarray:
         return np.concatenate([
@@ -300,7 +269,7 @@ class Tetris:
         # Next mino 描画 (4個まで)
         all_fields[0] += VOID_CHAR + "Ｎｅｘｔ" + VOID_CHAR
         now_line = 1
-        for i in range(self.next_mino_num):
+        for i in range(min(NEXT_MINO_NUM, len(self.mino_permutation))):
             all_fields[now_line] += VOID_CHAR * NEXT_MINO_LIST_WIDTH
             now_line += 1  # 空行
 

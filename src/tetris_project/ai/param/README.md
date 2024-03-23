@@ -7,6 +7,7 @@
 - $Dense(128) \rightarrow Dense(64) \rightarrow Dense(output\_size)$
 - 損失関数 : Huber Loss
 - $\epsilon\_{start} = 1.0, \ discount = 0.90, \ \epsilon\_{min} = 0.00001, \ \epsilon_{decay} = 0.995$
+- Experience Buffer を利用。エージェントの過去の行動結果を蓄積しておき、それを利用して学習することで NN の学習を方策 off で行う。経験の再利用によるデータの効率的利用・学習の安定性向上 (収束時間短縮)・時系列データにおけるノイズの排除が期待出来る。
 - input は以下
 
 ```python

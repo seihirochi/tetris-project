@@ -1,14 +1,21 @@
 import random
-from typing import Union
 
 import gymnasium as gym
 import numpy as np
 
-from tetris_gym import NEXT_MINO_NUM, Action, Mino, Tetris
+from tetris_gym.tetris import NEXT_MINO_NUM, Mino, Tetris
+
+from .action import Action
 
 
 class TetrisEnv(gym.Env):
-    def __init__(self, minos: set[Mino], action_mode=0, height=20, width=10):
+    def __init__(
+            self,
+            minos: set[Mino],
+            action_mode=0,
+            height=20,
+            width=10
+        ):
         self.view = None
         self.tetris = None
         self.height = height
@@ -31,18 +38,16 @@ class TetrisEnv(gym.Env):
                 gym.spaces.Discrete(width), # Y (-1 ~ width-1)
                 gym.spaces.Discrete(5),     # Rotation (0 ~ 3: rotate, 4: hold)
             ))
-            
-    def get_possible_states(self):
-        return self.tetris.get_possible_states()
 
     def reset(self, seed=None, options=None) -> tuple:
         # ゲームを初期化 -> tuple( 観測空間, その他の情報 )
-        self.tetris = Tetris(self.height, self.width, self.minos, self.action_mode)
+        self.tetris = Tetris(self.height, self.width, self.minos)
         obs = self.tetris.observe()
         info = {}  # other_info
         return np.array(obs), info
 
     def step(self, action: Action) -> tuple:
+        # 行動の処理をここで定義
         prev_score = self.tetris.score
         if self.action_mode == 0:
             if action.id == 0:  # move left

@@ -1,7 +1,8 @@
 import numpy as np
 from colr import color
 
-from tetris_gym import Action, Mino
+from tetris_gym import Action
+from tetris_gym.tetris import Mino
 
 EDGE_CHAR = color("　", back="white")
 VOID_CHAR = "　"
@@ -118,8 +119,10 @@ HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP = {
 }
 
 # action_mode = 1 用の action
-ALL_HARDDROP_ACTIONS = [
-    Action.from_values(y, rotate, False, width=TETRIS_WIDTH) for y in range(-2, TETRIS_WIDTH-1) for rotate in range(4)
-] + [
-    Action.from_values(0, 0, True, width=TETRIS_WIDTH)
-]
+# y: -2 ~ width-1, rotate: 0 ~ 3, hold: True/False
+ALL_HARDDROP_ACTIONS = set()
+
+for i in range(11): 
+    for j in range(4):
+        action = Action(i * 4 + j, f"hard drop, move to {i}, rotate {j} times")
+        ALL_HARDDROP_ACTIONS.add(action)
