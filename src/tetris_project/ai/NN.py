@@ -6,7 +6,7 @@ from typing import List, Tuple
 
 import numpy as np
 from gymnasium import Env
-from keras.layers import Dense
+from keras.layers import Dense, Input
 from keras.models import Sequential
 from keras.optimizers import Adam
 
@@ -37,7 +37,8 @@ class NN:
 
         # 4 層の Neural Network
         self.model = Sequential([
-            Dense(64, input_shape=(input_size,), activation='relu'),
+            Input(shape=(input_size,)),  # 入力層の定義
+            Dense(64, activation='relu'),
             Dense(64, activation='relu'),
             Dense(32, activation='relu'),
             Dense(output_size, activation='linear')
@@ -71,8 +72,8 @@ class NNTrainerController(Controller):
         self.epsilon_decay = epsilon_decay # ε-greedy法 の ε の減衰率
         self.experience_buffer = ExperienceBuffer() # Experience Replay Buffer
 
-    def get_action(self) -> Action:
-        possible_states = self.get_possible_actions()
+    def get_action(self, env: Env) -> Action:
+        possible_states = self.get_possible_actions(env)
         if random.random() < self.epsilon: # ε-greedy法
             return random.choice(possible_states)[0]
         else: # 最適行動

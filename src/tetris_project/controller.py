@@ -16,13 +16,13 @@ class Controller(ABC):
     def get_possible_actions(self, env: Env) -> List[Tuple[Action, np.ndarray]]:
         # Env の情報を見て可能な行動を return (行動決定を controller に一任する)
         actions = []
-        if env.action_mode == 0:
+        if env.unwrapped.action_mode == 0:
             # actions = [0, 1, 2, 3, 4, 5, 6]
             # ※ 現時点では機械学習には用いていない
             pass
-        elif env.action_mode == 1:
+        elif env.unwrapped.action_mode == 1:
             for action in self.actions:
-                y, rotate, hold = action.convert_to_tuple(env.tetris.board.width)
+                y, rotate, hold = action.convert_to_tuple(env.unwrapped.tetris.board.width)
                 if hold:
                     tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                     if tetris_copy.hold():

@@ -24,10 +24,10 @@ class TetrisEnv(gym.Env):
         self.action_mode = action_mode
 
         self.observation_space = gym.spaces.MultiDiscrete(
-            [self.height * self.width] * 9 +   # board の特徴量 (Dellacherie's Algorithm)
-            [len(minos)+1] +                   # current mino
-            [len(minos)+1] * NEXT_MINO_NUM +   # next minos
-            [len(minos)+1]                     # hold mino
+            [999999999] * 9 +                # board の特徴量 (上限が不明)
+            [len(minos)+1] +                 # current mino
+            [len(minos)+1] * NEXT_MINO_NUM + # next minos
+            [len(minos)+1]                   # hold mino
         )
 
         if action_mode == 0:

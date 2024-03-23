@@ -43,7 +43,7 @@ class Tetris:
         self.game_over = False
 
     def _generate_mino_state(self) -> MinoState:
-        # len(permutation) < 7 で新しい permutation を puh_back
+        # len(permutation) < 7 で次順の mino を追加
         if len(self.mino_permutation) < 7:
             add_permutation = copy.deepcopy(list(self.minos))
             random.shuffle(add_permutation)
@@ -72,17 +72,16 @@ class Tetris:
 
     def place(self) -> None:
         self.score += 1 # 設置出来たら +1 点
-        self.hold_used = False  # hold 状況をリセット
-        self.board.set_mino(self.current_mino_state)  # ミノをボードに固定
+        self.hold_used = False  # hold 状況 reset
+        self.board.set_mino(self.current_mino_state)  # mino を board に設置
 
-        self.latest_clear_lines = self.board.clear_lines()  # ラインが揃ったら消す
-        self.latest_clear_mino_state = self.current_mino_state # 消去に用いたミノを記録
-        self.line_total_count += len(self.latest_clear_lines)  # 消したライン数を加算
-        self.score += LINE_CLEAR_SCORE[len(self.latest_clear_lines)]  # 消したライン数に応じてスコアを加算
+        self.latest_clear_lines = self.board.clear_lines()                    # Line 消去処理
+        self.latest_clear_mino_state = copy.deepcopy(self.current_mino_state) # Line 消去時の mino を保存
+        self.line_total_count += len(self.latest_clear_lines)                 # Line 消去数加算
+        self.score += LINE_CLEAR_SCORE[len(self.latest_clear_lines)]          # Line 消去スコア加算
+        self.current_mino_state = self._generate_mino_state()                 # 次の mino を生成
 
-        self.current_mino_state = self._generate_mino_state()  # 新しいミノを生成
-
-        # ゲームオーバー判定
+        # Game Over 判定
         for i in range(self.current_mino_state.mino.shape.shape[0]):
             for j in range(self.current_mino_state.mino.shape.shape[1]):
                 if (
@@ -123,8 +122,8 @@ class Tetris:
     def observe(self) -> np.ndarray:
         return np.concatenate([
             [
-                self.line_total_count,
                 self.get_hole_count(),
+                self.get_above_block_squared_sum(),
                 self.get_latest_clear_mino_heght(),
                 self.get_row_transitions(),
                 self.get_column_transitions(),
@@ -139,46 +138,66 @@ class Tetris:
             ),
             self.hold_mino.mino.to_tensor().flatten(),
         ])
+    
+    def get_above_block_squared_sum(self) -> int:
+        # ========== above_block_squared_sum ========== #
+        # 空マスで自身より上部にあるブロックの数の二乗和 ( ★自作特徴量★ )
+
+        # get_hole_count との差別化
+        # get_hole_count : 基本的に穴は無い方が良いという状態を表現
+        # above_block_squared_sum : 穴がある時に穴の上にブロックが無い方が復帰しやすいという状態を表現
+        res = 0
+        for i in range(self.board.height):
+            for j in range(self.board.width):
+                if self.board.board[i][j] != 0:
+                    continue
+                cnt = 0
+                for k in range(i-1, -1, -1):
+                    if self.board.board[k][j] != 0:
+                        cnt += 1
+                res += cnt ** 2
+        return res
 
     def get_hole_count(self) -> int:
         # ========== hole_count ========== #
-        # 空マスで自身より上部に fill なマスがあるマス総数
+        # 空マスで自身より上部のブロックマス総数
         res = 0
-        for j in range(self.board.width):
-            flag = False
-            for i in range(self.board.height):
+        for i in range(self.board.height):
+            for j in range(self.board.width):
                 if self.board.board[i][j] != 0:
-                    flag = True
-                if flag and self.board.board[i][j] == 0:
-                    res += 1
+                    continue
+                for k in range(i-1, -1, -1):
+                    if self.board.board[k][j] != 0:
+                        res += 1
+                        break
         return res
     
     def get_latest_clear_mino_heght(self) -> int:
         # ========== latest_clear_mino_heght ========== #
-        # 直近で line 消しをしたミノの高さ
+        # 直近で Line 消しをしたミノの高さ
         if self.latest_clear_mino_state is None:
             return 0
         return self.board.height - self.latest_clear_mino_state.origin[0]
     
     def get_row_transitions(self) -> int:
         # ========== row_transitions ========== #
-        # 各行で fill ⇒ empty または empty ⇒ fill に変化する回数
+        # 各行でブロック ⇒ 空 or 空 ⇒ ブロック に変化する回数
         res = 0
         for i in range(self.board.height):
             for j in range(self.board.width - 1):
-                if ( (self.board.board[i][j] != 0) != (self.board.board[i][j + 1] != 0 ) or
-                    (self.board.board[i][j] == 0) != (self.board.board[i][j + 1] == 0) ):
+                if ( ((self.board.board[i][j] != 0) and (self.board.board[i][j + 1] != 0 )) or
+                    ((self.board.board[i][j] == 0) and (self.board.board[i][j + 1] == 0)) ):
                     res += 1
         return res
 
     def get_column_transitions(self) -> int:
         # ========== column_transitions ========== #
-        # 各列で fill ⇒ empty または empty ⇒ fill に変化する回数
+        # 各列でブロック ⇒ 空 or 空 ⇒ ブロック に変化する回数
         res = 0
         for j in range(self.board.width):
             for i in range(self.board.height - 1):
-                if ( (self.board.board[i][j] != 0) != (self.board.board[i + 1][j] != 0 ) or
-                    (self.board.board[i][j] == 0) != (self.board.board[i + 1][j] == 0) ):
+                if ( ((self.board.board[i][j] != 0) and (self.board.board[i + 1][j] != 0 )) or
+                    ((self.board.board[i][j] == 0) and (self.board.board[i + 1][j] == 0)) ):
                     res += 1
         return res
     
@@ -212,7 +231,7 @@ class Tetris:
     
     def get_cumulative_wells(self) -> int:
         # ========== cumulatve_well ========== #
-        # 左右が fill な空マスにおいて上に k 連続空マスが続く時
+        # 左右がブロックな空マスにおいて上に k 連続空マスが続く時
         # well(i,j) = ∑_{i=1}^{k} i = k(k+1)/2
         # cumulatve_well = ∑ well(i,j)
         res = 0
@@ -226,6 +245,7 @@ class Tetris:
                     while i-k >= 0 and self.board.board[i-k][j] == 0:
                         k += 1
                     res += k * (k+1) // 2
+                    i -= k
         return res
 
     def get_aggregate_height(self) -> int:
