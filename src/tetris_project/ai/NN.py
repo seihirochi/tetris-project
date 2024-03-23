@@ -17,14 +17,6 @@ from tetris_project.controller import Controller
 
 WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), 'out.weights.h5')
 
-def huberloss(y_true, y_pred):
-    err = y_true - y_pred
-    cond = tf.abs(err) < 1.0
-    L2 = 0.5 * tf.square(err)
-    L1 = tf.abs(err) - 0.5
-    loss = tf.where(cond, L2, L1)
-    return tf.reduce_mean(loss)
-
 class ExperienceBuffer:
     def __init__(self, buffer_size=20000):
         self.buffer = deque(maxlen=buffer_size)
@@ -44,14 +36,15 @@ class NN:
     def __init__(self, input_size: int, output_size: int) -> None:
         super().__init__()
 
-        # 3 層の Neural Network
+        # 4 層の Neural Network
         self.model = Sequential([
-            Dense(128, input_shape=(input_size,), activation='relu'),
+            Dense(64, input_shape=(input_size,), activation='relu'),
             Dense(64, activation='relu'),
+            Dense(32, activation='relu'),
             Dense(output_size, activation='linear')
         ])
         self.optimizer = Adam(learning_rate=0.001)
-        self.model.compile(loss=huberloss, optimizer=self.optimizer)    
+        self.model.compile(loss='mse', optimizer='adam', metrics=['mean_squared_error'])
 
     def save(self) -> None:
         if Path(WEIGHT_OUT_PATH).is_file():
@@ -68,8 +61,8 @@ class NNTrainerController(Controller):
             model,
             discount=0.95,
             epsilon=0.50,
-            epsilon_min=0.0001,
-            epsilon_decay=0.999
+            epsilon_min=0.01,
+            epsilon_decay=0.995
         ) -> None:
         super().__init__(actions)
         self.model = model

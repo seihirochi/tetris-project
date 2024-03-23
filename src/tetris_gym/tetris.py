@@ -41,6 +41,8 @@ class Tetris:
         self.latest_clear_mino_state = None
         self.latest_clear_lines = 0
 
+        self.next_mino_num = min(NEXT_MINO_NUM, len(self.mino_permutation))
+
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
         self.game_over = False
@@ -65,7 +67,6 @@ class Tetris:
     def hold(self) -> bool:
         if self.hold_used:
             return False
-
         self.hold_used = True
         if self.hold_mino.mino.id == 0:
             self.hold_mino = self.current_mino_state
@@ -299,7 +300,7 @@ class Tetris:
         # Next mino 描画 (4個まで)
         all_fields[0] += VOID_CHAR + "Ｎｅｘｔ" + VOID_CHAR
         now_line = 1
-        for i in range(NEXT_MINO_NUM):
+        for i in range(self.next_mino_num):
             all_fields[now_line] += VOID_CHAR * NEXT_MINO_LIST_WIDTH
             now_line += 1  # 空行
 

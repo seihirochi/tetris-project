@@ -4,9 +4,10 @@ from statistics import mean, median
 import gymnasium as gym
 
 from .ai import NN, NNPlayerController, NNTrainerController
-from .config import (HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_ACTIONS_V2,
-                     ORDINARY_TETRIS_MINOS, TETRIS_HEIGHT, TETRIS_WIDTH)
+from .config import (ALL_HARDDROP_ACTIONS,
+                     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
+                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS,
+                     TETRIS_HEIGHT, TETRIS_WIDTH)
 from .controller import HumanController
 
 
@@ -52,16 +53,16 @@ def train():
     output_size = 1
     model = NN(input_size, output_size)
     controller = NNTrainerController(
-        ORDINARY_TETRIS_ACTIONS_V2,
+        ALL_HARDDROP_ACTIONS,
         model.model,
-        discount=0.95,
+        discount=1.00,
         epsilon=1.00,
         epsilon_min=0.01,
-        epsilon_decay=0.999
+        epsilon_decay=0.995
     )
     
     # 既存の parametor を load する場合はファイル名指定
-    # model.load("param/NN1_hold.weights.h5")
+    # model.load("param/NN2_hold.weights.h5")
     
     running = True
     total_games = 0
@@ -101,10 +102,10 @@ def simulate():
     input_size = env.observation_space.shape[0]
     output_size = 1
     model = NN(input_size, output_size)
-    controller = NNPlayerController(ORDINARY_TETRIS_ACTIONS_V2, model.model)
+    controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model.model)
 
     # 既存の parametor を load する場合は param 配下のファイル名指定
-    model.load("param/NN2_hold.weights.h5")
+    model.load("param/NN2.weights.h5")
 
     running = True
     while running:

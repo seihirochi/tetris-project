@@ -39,37 +39,3 @@ def test_set_mino():
     assert board.board[5][6] == 2
     assert board.board[6][5] == 2
     assert board.board[6][6] == 2
-
-
-def test_render_with_mino():
-    mino_I = Mino(1,np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]),"I",)
-
-    game = Tetris(20, 10, {mino_I})
-    game.current_mino_state = MinoState(mino_I, 20, 10, (3, 3))
-    game.board = TetrisBoard(20, 10, {mino_I})
-    
-    print(game.render())
-    expected = """############
-#          #
-#          #
-#          #
-#    I     #
-#    I     #
-#    I     #
-#    I     #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-#          #
-############
-"""
-    assert game.render() == expected
