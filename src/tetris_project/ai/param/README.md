@@ -11,24 +11,24 @@
 - input は以下
 
 ```python
-    def observe(self) -> np.ndarray:
-        return np.concatenate([
-            [
-                self.line_total_count,
-                self.get_hole_count(),
-                self.get_latest_clear_mino_heght(),
-                self.get_row_transitions(),
-                self.get_column_transitions(),
-                self.get_bumpiness(),
-                self.get_eroded_piece_cells(),
-                self.get_cumulative_wells(),
-                self.get_aggregate_height(),
-            ],
-            self.current_mino_state.mino.to_tensor().flatten(),
-            np.concatenate(
-                [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
-            ),
-        ])
+def observe(self) -> np.ndarray:
+    return np.concatenate([
+        [
+            self.line_total_count,
+            self.get_hole_count(),
+            self.get_latest_clear_mino_heght(),
+            self.get_row_transitions(),
+            self.get_column_transitions(),
+            self.get_bumpiness(),
+            self.get_eroded_piece_cells(),
+            self.get_cumulative_wells(),
+            self.get_aggregate_height(),
+        ],
+        self.current_mino_state.mino.to_tensor().flatten(),
+        np.concatenate(
+            [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+        ),
+    ])
 ```
 
 ## NN1
@@ -41,25 +41,25 @@
 - input は以下
 
 ```python
-    def observe(self) -> np.ndarray:
-        return np.concatenate([
-            [
-                self.line_total_count,
-                self.get_hole_count(),
-                self.get_latest_clear_mino_heght(),
-                self.get_row_transitions(),
-                self.get_column_transitions(),
-                self.get_bumpiness(),
-                self.get_eroded_piece_cells(),
-                self.get_cumulative_wells(),
-                self.get_aggregate_height(),
-            ],
-            self.current_mino_state.mino.to_tensor().flatten(),
-            np.concatenate(
-                [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
-            ),
-            self.hold_mino.mino.to_tensor().flatten(),
-        ])
+def observe(self) -> np.ndarray:
+    return np.concatenate([
+        [
+            self.line_total_count,
+            self.get_hole_count(),
+            self.get_latest_clear_mino_heght(),
+            self.get_row_transitions(),
+            self.get_column_transitions(),
+            self.get_bumpiness(),
+            self.get_eroded_piece_cells(),
+            self.get_cumulative_wells(),
+            self.get_aggregate_height(),
+        ],
+        self.current_mino_state.mino.to_tensor().flatten(),
+        np.concatenate(
+            [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+        ),
+        self.hold_mino.mino.to_tensor().flatten(),
+    ])
 ```
 
 ## NN2
@@ -72,23 +72,53 @@
 - input は以下
 
 ```python
-    def observe(self) -> np.ndarray:
-        return np.concatenate([
-            [
-                self.line_total_count,
-                self.get_hole_count(),
-                self.get_latest_clear_mino_heght(),
-                self.get_row_transitions(),
-                self.get_column_transitions(),
-                self.get_bumpiness(),
-                self.get_eroded_piece_cells(),
-                self.get_cumulative_wells(),
-                self.get_aggregate_height(),
-            ],
-            self.current_mino_state.mino.to_tensor().flatten(),
-            np.concatenate(
-                [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
-            ),
-            self.hold_mino.mino.to_tensor().flatten(),
-        ])
+def observe(self) -> np.ndarray:
+    return np.concatenate([
+        [
+            self.line_total_count,
+            self.get_hole_count(),
+            self.get_latest_clear_mino_heght(),
+            self.get_row_transitions(),
+            self.get_column_transitions(),
+            self.get_bumpiness(),
+            self.get_eroded_piece_cells(),
+            self.get_cumulative_wells(),
+            self.get_aggregate_height(),
+        ],
+        self.current_mino_state.mino.to_tensor().flatten(),
+        np.concatenate(
+            [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+        ),
+        self.hold_mino.mino.to_tensor().flatten(),
+    ])
+```
+
+## NN3
+
+- 盤面特徴量のバグ修正 & 新特徴量の追加
+- $Dense(64) \rightarrow Dense(64) \rightarrow Dense(32) \rightarrow Dense(output\_size)$
+- 損失関数 : Mean Squared Error
+- $\epsilon\_{start} = 1.0, \ discount = 1.00, \ \epsilon\_{min} = 0.001, \ \epsilon_{decay} = 0.995$
+- input は以下
+
+```python
+def observe(self) -> np.ndarray:
+    return np.concatenate([
+        [
+            self.get_hole_count(),
+            self.get_above_block_squared_sum(),
+            self.get_latest_clear_mino_heght(),
+            self.get_row_transitions(),
+            self.get_column_transitions(),
+            self.get_bumpiness(),
+            self.get_eroded_piece_cells(),
+            self.get_cumulative_wells(),
+            self.get_aggregate_height(),
+        ],
+        self.current_mino_state.mino.to_tensor().flatten(),
+        np.concatenate(
+            [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+        ),
+        self.hold_mino.mino.to_tensor().flatten(),
+    ])
 ```

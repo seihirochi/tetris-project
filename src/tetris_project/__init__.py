@@ -57,8 +57,8 @@ def train():
         model.model,
         discount=1.00,
         epsilon=1.00,
-        epsilon_min=0.01,
-        epsilon_decay=0.995
+        epsilon_min=0.1,
+        epsilon_decay=0.999
     )
     
     # 既存の parametor を load する場合はファイル名指定
