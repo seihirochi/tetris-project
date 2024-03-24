@@ -31,12 +31,11 @@ class Tetris:
             origin=(0, 0),
         )
 
-        self.line_total_count = 0
-        self.score = 0
-
-        # 直近で消されたミノ & 消されたライン集合
+        self.pre_mino_state = None
         self.latest_clear_mino_state = None
         self.latest_clear_lines = 0
+        self.line_total_count = 0
+        self.score = 0
 
         # 初期状態でミノを生成
         self.current_mino_state = self._generate_mino_state()
@@ -63,6 +62,8 @@ class Tetris:
         if self.hold_used:
             return False
         self.hold_used = True
+        self.pre_mino_state = copy.deepcopy(self.current_mino_state)
+        
         if self.hold_mino.mino.id == 0:
             self.hold_mino = self.current_mino_state
             self.current_mino_state = self._generate_mino_state()
@@ -75,11 +76,13 @@ class Tetris:
         self.hold_used = False  # hold 状況 reset
         self.board.set_mino(self.current_mino_state)  # mino を board に設置
 
-        self.latest_clear_lines = self.board.clear_lines()                    # Line 消去処理
-        self.latest_clear_mino_state = copy.deepcopy(self.current_mino_state) # Line 消去時の mino を保存
-        self.line_total_count += len(self.latest_clear_lines)                 # Line 消去数加算
-        self.score += LINE_CLEAR_SCORE[len(self.latest_clear_lines)]          # Line 消去スコア加算
-        self.current_mino_state = self._generate_mino_state()                 # 次の mino を生成
+        self.latest_clear_lines = self.board.clear_lines()                        # Line 消去処理
+        self.pre_mino_state = copy.deepcopy(self.current_mino_state)              # 直前の mino を保存
+        if len(self.latest_clear_lines) > 0:
+            self.latest_clear_mino_state = copy.deepcopy(self.current_mino_state) # Line 消去時の mino を保存
+        self.line_total_count += len(self.latest_clear_lines)                     # Line 消去数加算
+        self.score += LINE_CLEAR_SCORE[len(self.latest_clear_lines)]              # Line 消去スコア加算
+        self.current_mino_state = self._generate_mino_state()                     # 次の mino を生成
 
         # Game Over 判定
         for i in range(self.current_mino_state.mino.shape.shape[0]):

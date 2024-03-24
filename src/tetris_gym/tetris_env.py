@@ -49,40 +49,48 @@ class TetrisEnv(gym.Env):
     def step(self, action: Action) -> tuple:
         # 行動の処理をここで定義
         prev_score = self.tetris.score
+        movement_flug = False
+
         if self.action_mode == 0:
             if action.id == 0:  # move left
-                self.tetris.current_mino_state.move(0, -1, self.tetris.board.board)
+                movement_flug = self.tetris.current_mino_state.move(0, -1, self.tetris.board.board)
             elif action.id == 1:  # move right
-                self.tetris.current_mino_state.move(0, 1, self.tetris.board.board)
+                movement_flug = self.tetris.current_mino_state.move(0, 1, self.tetris.board.board)
             elif action.id == 2:  # move down
-                flug = self.tetris.current_mino_state.move(1, 0, self.tetris.board.board)
-                if flug:
-                    self.tetris.place()
+                if self.tetris.current_mino_state.move(1, 0, self.tetris.board.board):
+                    movement_flug = self.tetris.place()
             elif action.id == 3:  # rotate left
-                self.tetris.current_mino_state.rotate_left(self.tetris.board.board)
+                movement_flug = self.tetris.current_mino_state.rotate_left(self.tetris.board.board)
             elif action.id == 4:  # rotate right
-                self.tetris.current_mino_state.rotate_right(self.tetris.board.board)
+                movement_flug = self.tetris.current_mino_state.rotate_right(self.tetris.board.board)
             elif action.id == 5:  # hold
-                self.tetris.hold()
+                movement_flug = self.tetris.hold()
             elif action.id == 6:  # hard drop
-                flug = True
-                while flug:
-                    flug = self.tetris.current_mino_state.move(1, 0, self.tetris.board.board)
-                self.tetris.place()
+                hard_drop_flug = True
+                while hard_drop_flug:
+                    hard_drop_flug = self.tetris.current_mino_state.move(1, 0, self.tetris.board.board)
+                movement_flug = self.tetris.place()
         elif self.action_mode == 1:
             y, rotate, hold_flag = action.convert_to_tuple(self.tetris.board.width)
             if hold_flag:
-                self.tetris.hold()
+                movement_flug = self.tetris.hold()
             else:
-                self.tetris.move_and_rotate_and_drop(y, rotate)
+                movement_flug = self.tetris.move_and_rotate_and_drop(y, rotate)
+
+        if not movement_flug:
+            print(f"Movement Failed: {action.name}")
 
         # このターンで得た報酬
         reward = self.tetris.score - prev_score
         if self.tetris.game_over:
             reward = -1
+    
+        # 設置場所が半分より上か下か
+        mino_bottom_x = self.tetris.pre_mino_state.origin[0] + self.tetris.pre_mino_state.mino.shape.shape[0]
+        else_info = {"is_lower": (self.tetris.board.height // 2) <= mino_bottom_x}
 
         # tuple(観測情報, 報酬, ゲーム終了フラグ, その他)
-        return np.array(self.tetris.observe()), reward, self.tetris.game_over, False, {}
+        return np.array(self.tetris.observe()), reward, self.tetris.game_over, False, else_info
 
     def render(self) -> str:
         return self.tetris.render()
