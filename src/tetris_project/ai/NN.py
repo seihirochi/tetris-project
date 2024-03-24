@@ -115,10 +115,6 @@ class NNTrainerController(Controller):
                 total_reward += reward
                 steps += 1
 
-                # 学習が進むと長くなる為 score >= 1000 で終了
-                if total_reward >= 1000:
-                    done = True
-
             rewards.append(total_reward)
             self.learn()
 

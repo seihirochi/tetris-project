@@ -57,12 +57,12 @@ def train():
         model.model,
         discount=1.00,
         epsilon=1.00,
-        epsilon_min=0.05,
+        epsilon_min=0.001,
         epsilon_decay=0.999
     )
     
     # 既存の parametor を load する場合はファイル名指定
-    # model.load("param/NN2_hold.weights.h5")
+    # model.load("param/NN4.weights.h5")
     
     running = True
     total_games = 0
@@ -105,7 +105,7 @@ def simulate():
     controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model.model)
 
     # 既存の parametor を load する場合は param 配下のファイル名指定
-    model.load("param/NN3.weights.h5")
+    model.load("param/NN4.weights.h5")
 
     running = True
     while running:
