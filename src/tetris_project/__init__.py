@@ -105,7 +105,7 @@ def simulate():
     controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model.model)
 
     # 既存の parametor を load する場合は param 配下のファイル名指定
-    model.load("param/NN4.weights.h5")
+    model.load("param/NN5.weights.h5")
 
     running = True
     while running:

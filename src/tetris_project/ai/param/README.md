@@ -101,3 +101,8 @@ def observe(self) -> np.ndarray:
 
 - NN3 だとボード上部だけで完結しようとする $\rightarrow$ Experience Buffer を前半・後半で 2 つ用意して偏りを減らす
 - Model, parametor, input は NN2 と同じ
+
+## NN5
+
+- NN4 の parametor で火力の安定性を図るべく $\epsilon = 0.05$ から 1 episode Max 3000 点で Fine-tuning
+- Model, parametor, input は NN2 と同じ
