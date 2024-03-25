@@ -1,5 +1,9 @@
-from .board import *
-from .mino import *
-from .mino_state import *
-from .tetris import *
+from gymnasium.envs.registration import register
+
 from .action import *
+from .tetris_env import TetrisEnv
+
+register(
+    id='tetris-v1',
+    entry_point='tetris_gym:TetrisEnv',
+)

@@ -1,47 +1,82 @@
 import numpy as np
 from colr import color
 
-from tetris_gym import Mino, Action
+from tetris_gym import Action
+from tetris_gym.tetris import Mino
+
+EDGE_CHAR = color("　", back="white")
+VOID_CHAR = "　"
+
+TETRIS_WIDTH = 10
+TETRIS_HEIGHT = 20
 
 mino_I = Mino(
     1,
-    np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]),
+    np.array([
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0],
+        [0, 1, 0, 0]
+    ]),
     color("　", back="cyan"),
 )
 
 mino_J = Mino(
     2,
-    np.array([[0, 1, 1], [0, 1, 0], [0, 1, 0]]),
+    np.array([
+        [0, 1, 1],
+        [0, 1, 0],
+        [0, 1, 0]
+    ]),
     color("　", back="blue"),
 )
 
 mino_L = Mino(
     3,
-    np.array([[0, 1, 0], [0, 1, 0], [0, 1, 1]]),
+    np.array([
+        [0, 1, 0],
+        [0, 1, 0],
+        [0, 1, 1]
+    ]),
     color("　", back="orange"),
 )
 
 mino_O = Mino(
     4,
-    np.array([[1, 1], [1, 1]]),
+    np.array([
+        [1, 1],
+        [1, 1]
+    ]),
     color("　", back="yellow"),
 )
 
 mino_S = Mino(
     5,
-    np.array([[0, 1, 0], [0, 1, 1], [0, 0, 1]]),
+    np.array([
+        [0, 1, 0],
+        [0, 1, 1],
+        [0, 0, 1]
+    ]),
     color("　", back="green"),
 )
 
 mino_T = Mino(
     6,
-    np.array([[0, 1, 0], [0, 1, 1], [0, 1, 0]]),
+    np.array([
+        [0, 1, 0],
+        [0, 1, 1],
+        [0, 1, 0]
+    ]),
     color("　", back="magenta"),
 )
 
 mino_Z = Mino(
     7,
-    np.array([[0, 0, 1], [0, 1, 1], [0, 1, 0]]),
+    np.array([
+        [0, 0, 1],
+        [0, 1, 1],
+        [0, 1, 0]
+    ]),
     color("　", back="red"),
 )
 
@@ -83,9 +118,12 @@ HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP = {
     "w": action_HARD_DROP,
 }
 
+# action_mode = 1 用の action
+# y: -2 ~ width-1, rotate: 0 ~ 3, hold: True/False
 ALL_HARDDROP_ACTIONS = set()
 
 for i in range(11):
     for j in range(4):
         action = Action(i * 4 + j, f"hard drop, move to {i}, rotate {j} times")
         ALL_HARDDROP_ACTIONS.add(action)
+ALL_HARDDROP_ACTIONS.add(Action(44, "hold"))
