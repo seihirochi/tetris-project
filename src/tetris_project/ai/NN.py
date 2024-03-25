@@ -68,6 +68,7 @@ class NNTrainerController(Controller):
         epsilon=0.50,
         epsilon_min=0.01,
         epsilon_decay=0.995,
+        device="cpu",
     ) -> None:
         super().__init__(actions)
         self.model = model
@@ -80,14 +81,17 @@ class NNTrainerController(Controller):
         self.lower_experience_buffer = ExperienceBuffer()
         self.upper_experience_buffer = ExperienceBuffer()
 
+        self.device = device
+
     def get_action(self, env: Env) -> Action:
         possible_states = self.get_possible_actions(env)
         if random.random() < self.epsilon:  # ε-greedy法
             return random.choice(possible_states)[0]
         else:  # 最適行動
             states = [state for _, state in possible_states]
-            rating = self.model(torch.tensor(np.array(states)).float()).detach().numpy()
-            action = possible_states[np.argmax(rating)][0]
+            states_tensor = torch.tensor(np.array(states)).float().to(self.device)
+            rating = self.model(states_tensor)
+            action = possible_states[rating.argmax().item()][0]
             return action
 
     def train(self, env: Env, episodes=1):
@@ -151,11 +155,10 @@ class NNTrainerController(Controller):
         # 現在と次の状態の Q(s, a) を纏めてバッチ処理して効率化
         states = np.array([sample[0] for sample in all_batch])
         next_states = np.array([sample[3] for sample in all_batch])
-        all_targets = (
-            self.model(torch.tensor(np.concatenate([states, next_states])).float())
-            .detach()
-            .numpy()
+        cancat_states_tensor = (
+            torch.tensor(np.concatenate([states, next_states])).float().to(self.device)
         )
+        all_targets = self.model(cancat_states_tensor)
 
         targets = all_targets[:batch_size]
         next_targets = all_targets[batch_size:]
@@ -164,7 +167,9 @@ class NNTrainerController(Controller):
         # idx: 最も高い報酬の期待値のインデックス
         idx = np.argmax([sample[2] for sample in all_batch])
         print(f"Immediate max reward in batch: {all_batch[idx][2]}")
-        print(f"Action max value for the first sample in batch: {targets[idx]}")
+        print(
+            f"Action max value for the first sample in batch: {targets[idx].item()}\n"
+        )
 
         # Q(s, a) の更新
         for i, (_, _, reward, _, done) in enumerate(all_batch):
@@ -172,20 +177,24 @@ class NNTrainerController(Controller):
             if not done:
                 targets[i] += self.discount * next_targets[i]
 
+        targets_tensor = torch.tensor(targets).float().to(self.device)
+
         # 学習
         optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         criterion = nn.MSELoss()
         for _ in range(epochs):
             optimizer.zero_grad()
-            outputs = self.model(torch.tensor(states).float())
-            loss = criterion(outputs, torch.tensor(targets).float())
+            states_tensor = torch.tensor(states).float().to(self.device)
+            outputs = self.model(states_tensor)
+            loss = criterion(outputs, targets_tensor)
+
             loss.backward()
             optimizer.step()
 
         # 学習後に再度 batch 内で最も高い報酬の期待値 Q(s, a) を表示 (確認用)
-        targets = self.model(torch.tensor(states).float()).detach().numpy()
+        targets = self.model(torch.tensor(states).float().to(self.device))
         print(
-            f"Action max value for the first sample in batch after learning: {targets[idx]}\n"
+            f"Action max value for the first sample in batch after learning: {targets[idx].item()}\n"
         )
 
         # 学習させる度に ε を減衰
@@ -201,6 +210,6 @@ class NNPlayerController(Controller):
         possible_states = self.get_possible_actions(env)
         # 状態から最適行動を選択
         states = [state for _, state in possible_states]
-        rating = self.model(torch.tensor(np.array(states)).float()).detach().numpy()
-        action = possible_states[np.argmax(rating)][0]
+        rating = self.model(torch.tensor(np.array(states)).float())
+        action = possible_states[rating.argmax().item()][0]
         return action

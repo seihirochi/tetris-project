@@ -17,6 +17,8 @@ requires-python = ">= 3.8"
 [project.scripts]
 start = "tetris_project:start"
 train = "tetris_project:train"
+train-mps = "tetris_project:train_mps"
+train-cuda = "tetris_project:train_cuda"
 simulate = "tetris_project:simulate"
 
 [build-system]

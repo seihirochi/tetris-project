@@ -40,7 +40,17 @@ def start():
     print(env.render())
 
 
-def train():
+def train_cuda():
+    train("cuda")
+
+
+def train_mps():
+    train("mps")
+
+
+def train(device="cpu"):
+    print("Device: ", device)
+
     env = gym.make(
         "tetris-v1",
         height=TETRIS_HEIGHT,
@@ -54,7 +64,7 @@ def train():
     # output: 今後の報酬の期待値
     input_size = env.observation_space.shape[0]
     output_size = 1
-    model = NN(input_size, output_size)
+    model = NN(input_size, output_size).to(device)
     controller = NNTrainerController(
         ALL_HARDDROP_ACTIONS,
         model,
@@ -62,6 +72,7 @@ def train():
         epsilon=1.00,
         epsilon_min=0.001,
         epsilon_decay=0.999,
+        device=device,
     )
 
     # 既存の parametor を load する場合はファイル名指定
