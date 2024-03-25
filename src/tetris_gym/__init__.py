@@ -4,6 +4,6 @@ from .action import *
 from .tetris_env import TetrisEnv
 
 register(
-    id='tetris-v1',
-    entry_point='tetris_gym:TetrisEnv',
+    id="tetris-v1",
+    entry_point="tetris_gym:TetrisEnv",
 )
