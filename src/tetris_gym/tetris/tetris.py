@@ -15,10 +15,9 @@ NEXT_MINO_NUM = 3
 NEXT_MINO_LIST_WIDTH = 6
 LINE_CLEAR_SCORE = [0, 100, 300, 500, 800]
 
+
 class Tetris:
-    def __init__(
-        self, height: int, width: int, minos: set[Mino]
-    ) -> None:
+    def __init__(self, height: int, width: int, minos: set[Mino]) -> None:
         self.board = TetrisBoard(height, width, minos)
         self.minos = minos
         self.mino_permutation = deque()
@@ -63,26 +62,35 @@ class Tetris:
             return False
         self.hold_used = True
         self.pre_mino_state = copy.deepcopy(self.current_mino_state)
-        
+
         if self.hold_mino.mino.id == 0:
             self.hold_mino = self.current_mino_state
             self.current_mino_state = self._generate_mino_state()
-        else: # swap
-            self.hold_mino, self.current_mino_state = self.current_mino_state, self.hold_mino
+        else:  # swap
+            self.hold_mino, self.current_mino_state = (
+                self.current_mino_state,
+                self.hold_mino,
+            )
         return True
 
     def place(self) -> None:
-        self.score += 1 # 設置出来たら +1 点
+        self.score += 1  # 設置出来たら +1 点
         self.hold_used = False  # hold 状況 reset
         self.board.set_mino(self.current_mino_state)  # mino を board に設置
 
-        self.latest_clear_lines = self.board.clear_lines()                        # Line 消去処理
-        self.pre_mino_state = copy.deepcopy(self.current_mino_state)              # 直前の mino を保存
+        self.latest_clear_lines = self.board.clear_lines()  # Line 消去処理
+        self.pre_mino_state = copy.deepcopy(
+            self.current_mino_state
+        )  # 直前の mino を保存
         if len(self.latest_clear_lines) > 0:
-            self.latest_clear_mino_state = copy.deepcopy(self.current_mino_state) # Line 消去時の mino を保存
-        self.line_total_count += len(self.latest_clear_lines)                     # Line 消去数加算
-        self.score += LINE_CLEAR_SCORE[len(self.latest_clear_lines)]              # Line 消去スコア加算
-        self.current_mino_state = self._generate_mino_state()                     # 次の mino を生成
+            self.latest_clear_mino_state = copy.deepcopy(
+                self.current_mino_state
+            )  # Line 消去時の mino を保存
+        self.line_total_count += len(self.latest_clear_lines)  # Line 消去数加算
+        self.score += LINE_CLEAR_SCORE[
+            len(self.latest_clear_lines)
+        ]  # Line 消去スコア加算
+        self.current_mino_state = self._generate_mino_state()  # 次の mino を生成
 
         # Game Over 判定
         for i in range(self.current_mino_state.mino.shape.shape[0]):
@@ -121,27 +129,31 @@ class Tetris:
             flag = self.current_mino_state.move(1, 0, self.board.board)
         self.place()
         return True
-    
+
     def observe(self) -> np.ndarray:
-        return np.concatenate([
+        return np.concatenate(
             [
-                self.get_hole_count(),
-                self.get_above_block_squared_sum(),
-                self.get_latest_clear_mino_heght(),
-                self.get_row_transitions(),
-                self.get_column_transitions(),
-                self.get_bumpiness(),
-                self.get_eroded_piece_cells(),
-                self.get_cumulative_wells(),
-                self.get_aggregate_height(),
-            ],
-            self.current_mino_state.mino.to_tensor().flatten(),
-            np.concatenate(
-                [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
-            ),
-            self.hold_mino.mino.to_tensor().flatten(),
-        ])
-    
+                [
+                    self.get_hole_count(),
+                    self.get_above_block_squared_sum(),
+                    self.get_latest_clear_mino_heght(),
+                    self.get_row_transitions(),
+                    self.get_column_transitions(),
+                    self.get_bumpiness(),
+                    self.get_eroded_piece_cells(),
+                    self.get_cumulative_wells(),
+                    self.get_aggregate_height(),
+                ],
+                self.current_mino_state.mino.to_tensor().flatten(),
+                np.concatenate(
+                    [mino.to_tensor().flatten() for mino in self.mino_permutation][
+                        :NEXT_MINO_NUM
+                    ]
+                ),
+                self.hold_mino.mino.to_tensor().flatten(),
+            ]
+        )
+
     def get_above_block_squared_sum(self) -> int:
         # ========== above_block_squared_sum ========== #
         # 空マスで自身より上部にあるブロックの数の二乗和 ( ★自作特徴量★ )
@@ -155,10 +167,10 @@ class Tetris:
                 if self.board.board[i][j] != 0:
                     continue
                 cnt = 0
-                for k in range(i-1, -1, -1):
+                for k in range(i - 1, -1, -1):
                     if self.board.board[k][j] != 0:
                         cnt += 1
-                res += cnt ** 2
+                res += cnt**2
         return res
 
     def get_hole_count(self) -> int:
@@ -169,27 +181,30 @@ class Tetris:
             for j in range(self.board.width):
                 if self.board.board[i][j] != 0:
                     continue
-                for k in range(i-1, -1, -1):
+                for k in range(i - 1, -1, -1):
                     if self.board.board[k][j] != 0:
                         res += 1
                         break
         return res
-    
+
     def get_latest_clear_mino_heght(self) -> int:
         # ========== latest_clear_mino_heght ========== #
         # 直近で Line 消しをしたミノの高さ
         if self.latest_clear_mino_state is None:
             return 0
         return self.board.height - self.latest_clear_mino_state.origin[0]
-    
+
     def get_row_transitions(self) -> int:
         # ========== row_transitions ========== #
         # 各行でブロック ⇒ 空 or 空 ⇒ ブロック に変化する回数
         res = 0
         for i in range(self.board.height):
             for j in range(self.board.width - 1):
-                if ( ((self.board.board[i][j] != 0) and (self.board.board[i][j + 1] != 0 )) or
-                    ((self.board.board[i][j] == 0) and (self.board.board[i][j + 1] == 0)) ):
+                if (
+                    (self.board.board[i][j] != 0) and (self.board.board[i][j + 1] != 0)
+                ) or (
+                    (self.board.board[i][j] == 0) and (self.board.board[i][j + 1] == 0)
+                ):
                     res += 1
         return res
 
@@ -199,11 +214,14 @@ class Tetris:
         res = 0
         for j in range(self.board.width):
             for i in range(self.board.height - 1):
-                if ( ((self.board.board[i][j] != 0) and (self.board.board[i + 1][j] != 0 )) or
-                    ((self.board.board[i][j] == 0) and (self.board.board[i + 1][j] == 0)) ):
+                if (
+                    (self.board.board[i][j] != 0) and (self.board.board[i + 1][j] != 0)
+                ) or (
+                    (self.board.board[i][j] == 0) and (self.board.board[i + 1][j] == 0)
+                ):
                     res += 1
         return res
-    
+
     def get_bumpiness(self) -> int:
         # ========== bumpiness ========== #
         # 高さの差 (変化) の総和
@@ -219,7 +237,7 @@ class Tetris:
                 res += abs(prev_height - height)
             prev_height = height
         return res
-    
+
     def get_eroded_piece_cells(self) -> int:
         # ========== eroded_piece_cells ========== #
         # 直近の消したライン数 * それに貢献した直近のミノのセル数
@@ -227,11 +245,16 @@ class Tetris:
         if self.latest_clear_mino_state is not None:
             for i in range(self.latest_clear_mino_state.mino.shape.shape[0]):
                 for j in range(self.latest_clear_mino_state.mino.shape.shape[1]):
-                    if (self.latest_clear_mino_state.mino.shape[i][j] == 1 
-                        and self.latest_clear_lines.count(self.latest_clear_mino_state.origin[0] + i) > 0):
+                    if (
+                        self.latest_clear_mino_state.mino.shape[i][j] == 1
+                        and self.latest_clear_lines.count(
+                            self.latest_clear_mino_state.origin[0] + i
+                        )
+                        > 0
+                    ):
                         res += 1
         return res
-    
+
     def get_cumulative_wells(self) -> int:
         # ========== cumulatve_well ========== #
         # 左右がブロックな空マスにおいて上に k 連続空マスが続く時
@@ -239,15 +262,17 @@ class Tetris:
         # cumulatve_well = ∑ well(i,j)
         res = 0
         for j in range(self.board.width):
-            for i in range(self.board.height-1, -1, -1):
-                well_flag = (self.board.board[i][j] == 0)
-                well_flag &= ( j == 0 or self.board.board[i][j-1] != 0)
-                well_flag &= ( j == self.board.width - 1 or self.board.board[i][j+1] != 0)
+            for i in range(self.board.height - 1, -1, -1):
+                well_flag = self.board.board[i][j] == 0
+                well_flag &= j == 0 or self.board.board[i][j - 1] != 0
+                well_flag &= (
+                    j == self.board.width - 1 or self.board.board[i][j + 1] != 0
+                )
                 if well_flag:
                     k = 0
-                    while i-k >= 0 and self.board.board[i-k][j] == 0:
+                    while i - k >= 0 and self.board.board[i - k][j] == 0:
                         k += 1
-                    res += k * (k+1) // 2
+                    res += k * (k + 1) // 2
                     i -= k
         return res
 

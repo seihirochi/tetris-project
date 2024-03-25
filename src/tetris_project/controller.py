@@ -22,22 +22,18 @@ class Controller(ABC):
             pass
         elif env.unwrapped.action_mode == 1:
             for action in self.actions:
-                y, rotate, hold = action.convert_to_tuple(env.unwrapped.tetris.board.width)
+                y, rotate, hold = action.convert_to_tuple(
+                    env.unwrapped.tetris.board.width
+                )
                 if hold:
                     tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                     if tetris_copy.hold():
-                        actions.append((
-                            action,
-                            tetris_copy.observe()
-                        ))
+                        actions.append((action, tetris_copy.observe()))
                     continue
                 tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                 flag = tetris_copy.move_and_rotate_and_drop(y, rotate)
                 if flag:
-                    actions.append((
-                        action,
-                        tetris_copy.observe()
-                    ))
+                    actions.append((action, tetris_copy.observe()))
         return actions
 
     @abstractmethod

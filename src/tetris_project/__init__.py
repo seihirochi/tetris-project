@@ -1,13 +1,16 @@
-
 from statistics import mean, median
 
 import gymnasium as gym
 
 from .ai import NN, NNPlayerController, NNTrainerController
-from .config import (ALL_HARDDROP_ACTIONS,
-                     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS,
-                     TETRIS_HEIGHT, TETRIS_WIDTH)
+from .config import (
+    ALL_HARDDROP_ACTIONS,
+    HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
+    ORDINARY_TETRIS_ACTIONS,
+    ORDINARY_TETRIS_MINOS,
+    TETRIS_HEIGHT,
+    TETRIS_WIDTH,
+)
 from .controller import HumanController
 
 
@@ -21,7 +24,7 @@ def start():
         height=TETRIS_HEIGHT,
         width=TETRIS_WIDTH,
         minos=ORDINARY_TETRIS_MINOS,
-        action_mode=0
+        action_mode=0,
     )
     env.reset()
     done = False
@@ -43,7 +46,7 @@ def train():
         height=TETRIS_HEIGHT,
         width=TETRIS_WIDTH,
         minos=ORDINARY_TETRIS_MINOS,
-        action_mode=1
+        action_mode=1,
     )
     env.reset()
 
@@ -58,12 +61,12 @@ def train():
         discount=1.00,
         epsilon=1.00,
         epsilon_min=0.001,
-        epsilon_decay=0.999
+        epsilon_decay=0.999,
     )
-    
+
     # 既存の parametor を load する場合はファイル名指定
     # model.load("param/NN4.weights.h5")
-    
+
     running = True
     total_games = 0
     total_steps = 0
@@ -71,7 +74,7 @@ def train():
         steps, rewards = controller.train(env, episodes=20)
         total_games += len(rewards)
         total_steps += steps
-        model.save() # 途中経過を保存
+        model.save()  # 途中経過を保存
 
         print(env.render())
         print("==================")
@@ -93,7 +96,7 @@ def simulate():
         height=TETRIS_HEIGHT,
         width=TETRIS_WIDTH,
         minos=ORDINARY_TETRIS_MINOS,
-        action_mode=1
+        action_mode=1,
     )
     env.reset()
 
@@ -115,6 +118,7 @@ def simulate():
         if done:
             _, _ = env.reset()
             input("Press Enter to continue...")
+
 
 if __name__ == "__main__":
     train()
