@@ -2,7 +2,7 @@ from statistics import mean, median
 
 import gymnasium as gym
 
-from .ai import NN, NNPlayerController, NNTrainerController
+from .ai import NN, NNPlayerController, NNTrainerController, WEIGHT_OUT_PATH
 from .config import (
     ALL_HARDDROP_ACTIONS,
     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
@@ -57,7 +57,7 @@ def train():
     model = NN(input_size, output_size)
     controller = NNTrainerController(
         ALL_HARDDROP_ACTIONS,
-        model.model,
+        model,
         discount=1.00,
         epsilon=1.00,
         epsilon_min=0.001,
@@ -105,10 +105,10 @@ def simulate():
     input_size = env.observation_space.shape[0]
     output_size = 1
     model = NN(input_size, output_size)
-    controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model.model)
+    controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model)
 
     # 既存の parametor を load する場合は param 配下のファイル名指定
-    model.load("param/NN5.weights.h5")
+    model.load(WEIGHT_OUT_PATH)
 
     running = True
     while running:

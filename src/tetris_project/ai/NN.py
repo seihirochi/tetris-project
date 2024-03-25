@@ -6,15 +6,15 @@ from typing import List, Tuple
 
 import numpy as np
 from gymnasium import Env
-from keras.layers import Dense, Input
-from keras.models import Sequential
-from keras.optimizers import Adam
+
+import torch
+import torch.nn as nn
 
 from tetris_gym import Action
 from tetris_gym.tetris import LINE_CLEAR_SCORE
 from tetris_project.controller import Controller
 
-WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "out.weights.h5")
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "out.pth")
 
 
 class ExperienceBuffer:
@@ -35,38 +35,35 @@ class ExperienceBuffer:
         return len(self.buffer)
 
 
-class NN:
+class NN(nn.Module):
     def __init__(self, input_size: int, output_size: int) -> None:
-        super().__init__()
+        super(NN, self).__init__()
+        self.fc1 = nn.Linear(input_size, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 32)
+        self.fc4 = nn.Linear(32, output_size)
 
-        # 4 層の Neural Network
-        self.model = Sequential(
-            [
-                Input(shape=(input_size,)),  # 入力層の定義
-                Dense(64, activation="relu"),
-                Dense(64, activation="relu"),
-                Dense(32, activation="relu"),
-                Dense(output_size, activation="linear"),
-            ]
-        )
-        self.optimizer = Adam(learning_rate=0.001)
-        self.model.compile(loss="mse", optimizer="adam", metrics=["mean_squared_error"])
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = torch.relu(self.fc3(x))
+        x = self.fc4(x)
+        return x
 
     def save(self) -> None:
-        if Path(WEIGHT_OUT_PATH).is_file():
-            self.model.save_weights(WEIGHT_OUT_PATH)
+        torch.save(self.state_dict(), WEIGHT_OUT_PATH)
 
     def load(self, path: str) -> None:
         path = os.path.join(os.path.dirname(__file__), path)
         if Path(path).is_file():
-            self.model.load_weights(path)
+            self.load_state_dict(torch.load(path))
 
 
 class NNTrainerController(Controller):
     def __init__(
         self,
         actions: set[Action],
-        model,
+        model: nn.Module,
         discount=0.95,
         epsilon=0.50,
         epsilon_min=0.01,
@@ -89,7 +86,7 @@ class NNTrainerController(Controller):
             return random.choice(possible_states)[0]
         else:  # 最適行動
             states = [state for _, state in possible_states]
-            rating = self.model.predict(np.array(states), verbose=0)
+            rating = self.model(torch.tensor(np.array(states)).float()).detach().numpy()
             action = possible_states[np.argmax(rating)][0]
             return action
 
@@ -154,8 +151,10 @@ class NNTrainerController(Controller):
         # 現在と次の状態の Q(s, a) を纏めてバッチ処理して効率化
         states = np.array([sample[0] for sample in all_batch])
         next_states = np.array([sample[3] for sample in all_batch])
-        all_targets = self.model.predict(
-            np.concatenate([states, next_states]), batch_size=(batch_size * 2)
+        all_targets = (
+            self.model(torch.tensor(np.concatenate([states, next_states])).float())
+            .detach()
+            .numpy()
         )
 
         targets = all_targets[:batch_size]
@@ -174,10 +173,17 @@ class NNTrainerController(Controller):
                 targets[i] += self.discount * next_targets[i]
 
         # 学習
-        self.model.fit(states, targets, batch_size=batch_size, epochs=epochs, verbose=0)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        criterion = nn.MSELoss()
+        for _ in range(epochs):
+            optimizer.zero_grad()
+            outputs = self.model(torch.tensor(states).float())
+            loss = criterion(outputs, torch.tensor(targets).float())
+            loss.backward()
+            optimizer.step()
 
         # 学習後に再度 batch 内で最も高い報酬の期待値 Q(s, a) を表示 (確認用)
-        targets = self.model.predict(states, batch_size=batch_size)
+        targets = self.model(torch.tensor(states).float()).detach().numpy()
         print(
             f"Action max value for the first sample in batch after learning: {targets[idx]}\n"
         )
@@ -195,6 +201,6 @@ class NNPlayerController(Controller):
         possible_states = self.get_possible_actions(env)
         # 状態から最適行動を選択
         states = [state for _, state in possible_states]
-        rating = self.model.predict(np.array(states), verbose=0)
+        rating = self.model(torch.tensor(np.array(states)).float()).detach().numpy()
         action = possible_states[np.argmax(rating)][0]
         return action

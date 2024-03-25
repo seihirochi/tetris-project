@@ -106,3 +106,8 @@ def observe(self) -> np.ndarray:
 
 - NN4 の parametor で火力の安定性を図るべく $\epsilon = 0.05$ から 1 episode Max 3000 点で Fine-tuning
 - Model, parametor, input は NN2 と同じ
+
+## NN6
+
+- Pytorch に移行
+- Model を Batch Fit から 1 Step Fit に変更 (torchの特性上)
