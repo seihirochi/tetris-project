@@ -2,7 +2,8 @@ from statistics import mean, median
 
 import gymnasium as gym
 
-from .ai import NN, NNPlayerController, NNTrainerController, WEIGHT_OUT_PATH
+# from .ai import NN, NNPlayerController, NNTrainerController, WEIGHT_OUT_PATH
+from .dqn import DQN, DQNTrainerController, WEIGHT_OUT_PATH
 from .config import (
     ALL_HARDDROP_ACTIONS,
     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
@@ -57,15 +58,17 @@ def train(device="cpu"):
         width=TETRIS_WIDTH,
         minos=ORDINARY_TETRIS_MINOS,
         action_mode=1,
+        env_mode="natural",
     )
     env.reset()
 
-    # input: 状態特徴量
-    # output: 今後の報酬の期待値
-    input_size = env.observation_space.shape[0]
-    output_size = 1
-    model = NN(input_size, output_size).to(device)
-    controller = NNTrainerController(
+    model = DQN(
+        (TETRIS_HEIGHT, TETRIS_WIDTH),
+        len(ORDINARY_TETRIS_MINOS),
+        3,
+        len(ALL_HARDDROP_ACTIONS),
+    ).to(device)
+    controller = DQNTrainerController(
         ALL_HARDDROP_ACTIONS,
         model,
         discount=1.00,
@@ -73,6 +76,7 @@ def train(device="cpu"):
         epsilon_min=0.001,
         epsilon_decay=0.999,
         device=device,
+        mino_kinds=len(ORDINARY_TETRIS_MINOS),
     )
 
     # 既存の parametor を load する場合はファイル名指定
@@ -115,8 +119,22 @@ def simulate():
     # output: 今後の報酬の期待値
     input_size = env.observation_space.shape[0]
     output_size = 1
-    model = NN(input_size, output_size)
-    controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model)
+    # model = NN(input_size, output_size)
+    # controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model)
+    model = DQN(
+        (TETRIS_HEIGHT, TETRIS_WIDTH),
+        len(ORDINARY_TETRIS_MINOS),
+        3,
+        len(ALL_HARDDROP_ACTIONS),
+    )
+    controller = DQNTrainerController(
+        ALL_HARDDROP_ACTIONS,
+        model,
+        discount=1.00,
+        epsilon=0.00,
+        epsilon_min=0.00,
+        epsilon_decay=1.00,
+    )
 
     # 既存の parametor を load する場合は param 配下のファイル名指定
     model.load(WEIGHT_OUT_PATH)

@@ -52,6 +52,7 @@ mino_Z = Mino(
     color("　", back="red"),
 )
 
+
 ORDINARY_TETRIS_MINOS = {
     mino_I,
     mino_J,
@@ -61,6 +62,13 @@ ORDINARY_TETRIS_MINOS = {
     mino_T,
     mino_Z,
 }
+
+
+def get_ordinary_tetris_mino_one_hot(mino_id: int) -> np.ndarray:
+    one_hot = np.zeros(len(ORDINARY_TETRIS_MINOS))
+    one_hot[mino_id - 1] = 1
+    return one_hot
+
 
 action_LEFT = Action(0, "move left")
 action_RIGHT = Action(1, "move right")

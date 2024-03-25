@@ -5,6 +5,7 @@ from collections import deque
 import numpy as np
 
 from tetris_project.config import EDGE_CHAR, VOID_CHAR
+from typing import Tuple
 
 from .board import TetrisBoard
 from .mino import Mino
@@ -130,7 +131,7 @@ class Tetris:
         self.place()
         return True
 
-    def observe(self) -> np.ndarray:
+    def observe_features(self) -> np.ndarray:
         return np.concatenate(
             [
                 [
@@ -152,6 +153,14 @@ class Tetris:
                 ),
                 self.hold_mino.mino.to_tensor().flatten(),
             ]
+        )
+
+    def observe_natural(self) -> Tuple[np.ndarray, int, np.ndarray, int]:
+        return (
+            self.board.board,
+            self.current_mino_state.mino.id,
+            np.array([mino.id for mino in self.mino_permutation][:NEXT_MINO_NUM]),
+            self.hold_mino.mino.id,
         )
 
     def get_above_block_squared_sum(self) -> int:
