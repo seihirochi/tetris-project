@@ -6,15 +6,15 @@ from typing import List, Tuple
 
 import numpy as np
 from gymnasium import Env
-from keras.layers import Dense, Input
-from keras.models import Sequential
-from keras.optimizers import Adam
+
+import torch
+import torch.nn as nn
 
 from tetris_gym import Action
 from tetris_gym.tetris import LINE_CLEAR_SCORE
 from tetris_project.controller import Controller
 
-WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "out.weights.h5")
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "out.pth")
 
 
 class ExperienceBuffer:
@@ -35,42 +35,40 @@ class ExperienceBuffer:
         return len(self.buffer)
 
 
-class NN:
+class NN(nn.Module):
     def __init__(self, input_size: int, output_size: int) -> None:
-        super().__init__()
+        super(NN, self).__init__()
+        self.fc1 = nn.Linear(input_size, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 32)
+        self.fc4 = nn.Linear(32, output_size)
 
-        # 4 層の Neural Network
-        self.model = Sequential(
-            [
-                Input(shape=(input_size,)),  # 入力層の定義
-                Dense(64, activation="relu"),
-                Dense(64, activation="relu"),
-                Dense(32, activation="relu"),
-                Dense(output_size, activation="linear"),
-            ]
-        )
-        self.optimizer = Adam(learning_rate=0.001)
-        self.model.compile(loss="mse", optimizer="adam", metrics=["mean_squared_error"])
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = torch.relu(self.fc3(x))
+        x = self.fc4(x)
+        return x
 
     def save(self) -> None:
-        if Path(WEIGHT_OUT_PATH).is_file():
-            self.model.save_weights(WEIGHT_OUT_PATH)
+        torch.save(self.state_dict(), WEIGHT_OUT_PATH)
 
     def load(self, path: str) -> None:
         path = os.path.join(os.path.dirname(__file__), path)
         if Path(path).is_file():
-            self.model.load_weights(path)
+            self.load_state_dict(torch.load(path))
 
 
 class NNTrainerController(Controller):
     def __init__(
         self,
         actions: set[Action],
-        model,
+        model: nn.Module,
         discount=0.95,
         epsilon=0.50,
         epsilon_min=0.01,
         epsilon_decay=0.995,
+        device="cpu",
     ) -> None:
         super().__init__(actions)
         self.model = model
@@ -83,14 +81,17 @@ class NNTrainerController(Controller):
         self.lower_experience_buffer = ExperienceBuffer()
         self.upper_experience_buffer = ExperienceBuffer()
 
+        self.device = device
+
     def get_action(self, env: Env) -> Action:
         possible_states = self.get_possible_actions(env)
         if random.random() < self.epsilon:  # ε-greedy法
             return random.choice(possible_states)[0]
         else:  # 最適行動
             states = [state for _, state in possible_states]
-            rating = self.model.predict(np.array(states), verbose=0)
-            action = possible_states[np.argmax(rating)][0]
+            states_tensor = torch.tensor(np.array(states)).float().to(self.device)
+            rating = self.model(states_tensor)
+            action = possible_states[rating.argmax().item()][0]
             return action
 
     def train(self, env: Env, episodes=1):
@@ -154,9 +155,10 @@ class NNTrainerController(Controller):
         # 現在と次の状態の Q(s, a) を纏めてバッチ処理して効率化
         states = np.array([sample[0] for sample in all_batch])
         next_states = np.array([sample[3] for sample in all_batch])
-        all_targets = self.model.predict(
-            np.concatenate([states, next_states]), batch_size=(batch_size * 2)
+        cancat_states_tensor = (
+            torch.tensor(np.concatenate([states, next_states])).float().to(self.device)
         )
+        all_targets = self.model(cancat_states_tensor)
 
         targets = all_targets[:batch_size]
         next_targets = all_targets[batch_size:]
@@ -165,7 +167,9 @@ class NNTrainerController(Controller):
         # idx: 最も高い報酬の期待値のインデックス
         idx = np.argmax([sample[2] for sample in all_batch])
         print(f"Immediate max reward in batch: {all_batch[idx][2]}")
-        print(f"Action max value for the first sample in batch: {targets[idx]}")
+        print(
+            f"Action max value for the first sample in batch: {targets[idx].item()}\n"
+        )
 
         # Q(s, a) の更新
         for i, (_, _, reward, _, done) in enumerate(all_batch):
@@ -173,13 +177,24 @@ class NNTrainerController(Controller):
             if not done:
                 targets[i] += self.discount * next_targets[i]
 
+        targets_tensor = torch.tensor(targets).float().to(self.device)
+
         # 学習
-        self.model.fit(states, targets, batch_size=batch_size, epochs=epochs, verbose=0)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        criterion = nn.MSELoss()
+        for _ in range(epochs):
+            optimizer.zero_grad()
+            states_tensor = torch.tensor(states).float().to(self.device)
+            outputs = self.model(states_tensor)
+            loss = criterion(outputs, targets_tensor)
+
+            loss.backward()
+            optimizer.step()
 
         # 学習後に再度 batch 内で最も高い報酬の期待値 Q(s, a) を表示 (確認用)
-        targets = self.model.predict(states, batch_size=batch_size)
+        targets = self.model(torch.tensor(states).float().to(self.device))
         print(
-            f"Action max value for the first sample in batch after learning: {targets[idx]}\n"
+            f"Action max value for the first sample in batch after learning: {targets[idx].item()}\n"
         )
 
         # 学習させる度に ε を減衰
@@ -195,6 +210,6 @@ class NNPlayerController(Controller):
         possible_states = self.get_possible_actions(env)
         # 状態から最適行動を選択
         states = [state for _, state in possible_states]
-        rating = self.model.predict(np.array(states), verbose=0)
-        action = possible_states[np.argmax(rating)][0]
+        rating = self.model(torch.tensor(np.array(states)).float())
+        action = possible_states[rating.argmax().item()][0]
         return action
