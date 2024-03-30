@@ -28,12 +28,12 @@ class Controller(ABC):
                 if hold:
                     tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                     if tetris_copy.hold():
-                        actions.append((action, tetris_copy.observe()))
+                        actions.append((action, tetris_copy.observe_natural()))
                     continue
                 tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                 flag = tetris_copy.move_and_rotate_and_drop(y, rotate)
                 if flag:
-                    actions.append((action, tetris_copy.observe()))
+                    actions.append((action, tetris_copy.observe_natural()))
         return actions
 
     @abstractmethod

@@ -14,6 +14,7 @@ from tetris_gym import Action
 from tetris_gym.tetris import LINE_CLEAR_SCORE, Mino
 from tetris_project.controller import Controller
 from tetris_project.config import get_ordinary_tetris_mino_one_hot
+import copy
 
 WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "out.pth")
 
@@ -77,50 +78,55 @@ class DQN(nn.Module):
         self.output_size = output_size
 
         # 盤面情報を扱うCNN, 3層で盤面情報は(20, 10)の2D情報, 0: void, 1: blockの1チャンネル
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
-        self.fc1 = nn.Linear(64 * 20 * 10, 512)
-
-        # ミノID, HoldミノID, NextミノIDsを扱うEmbedding層
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+        self.layer3 = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
         self.mino_embedding = nn.Embedding(mino_kinds, 1)
         self.hold_mino_embedding = nn.Embedding(mino_kinds, 1)
         self.next_minos_embedding = nn.Embedding(mino_kinds * next_minos_size, 1)
-
-        # 結合層
-        self.fc2 = nn.Linear(512 + 7 * (2 + next_minos_size), 256)
-        self.fc3 = nn.Linear(256, output_size)
+        self.layer5 = nn.Sequential(
+            nn.Linear(64 * 2 * 1 + 7 * (2 + next_minos_size), 128),
+            nn.ReLU(),
+        )
+        self.layer6 = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+        )
+        self.layer7 = nn.Linear(64, output_size)
 
     def forward(
         self,
         x: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
     ) -> torch.Tensor:
         board, mino_id, next_mino_ids, hold_mino_id = x
+        x = self.layer1(board)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = x.view(-1, 64 * 2 * 1)
 
-        # 盤面情報をCNNに通す
-        x = torch.relu(self.conv1(board))
-        x = torch.relu(self.conv2(x))
-        x = torch.relu(self.conv3(x))
-        x = x.view(-1, 64 * 20 * 10)
-        x = torch.relu(self.fc1(x))
-
-        # ミノID, HoldミノID, NextミノIDsをEmbedding層に通す
         mino_id = self.mino_embedding(mino_id)
         hold_mino_id = self.hold_mino_embedding(hold_mino_id)
-        # print(next_mino_ids.shape)
         next_mino_ids = self.next_minos_embedding(next_mino_ids)
-        # print(x.shape, mino_id.shape, hold_mino_id.shape, next_mino_ids.shape)
-        # (32, 512), (32, 7, 1), (32, 7, 1), (32, 21, 3)
         mino_id = mino_id.view(-1, self.mino_kinds)
         hold_mino_id = hold_mino_id.view(-1, self.mino_kinds)
         next_mino_ids = next_mino_ids.view(-1, self.mino_kinds * self.next_minos_size)
-        # print(x.shape, mino_id.shape, hold_mino_id.shape, next_mino_ids.shape)
-        # Embedding層の出力を結合
-        x = torch.cat([x, mino_id, hold_mino_id, next_mino_ids], dim=1)
 
-        # 結合層に通す
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = torch.cat([x, mino_id, hold_mino_id, next_mino_ids], dim=1)
+        x = self.layer5(x)
+        x = self.layer6(x)
+        x = self.layer7(x)
         return x
 
     def save(self) -> None:
@@ -157,7 +163,12 @@ class DQNTrainerController(Controller):
 
         self.device = device
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        self.loss = nn.SmoothL1Loss()
         self.mino_kinds = mino_kinds
+        self.losses = []
+
+        self.target_model = copy.deepcopy(self.model)
+        self.target_model.eval()
 
     def train(self, env: Env, episodes: int) -> Tuple[int, List[float]]:
         steps = 0
@@ -167,12 +178,11 @@ class DQNTrainerController(Controller):
             done = False
             total_reward = 0
             while not done:
-                action = self.get_action(state)
+                action = self.get_action(state, env)
                 next_state, reward, done, _, _ = env.step(action)
                 self.remember(state, action, reward, next_state, done)
-                self.replay()
 
-                if reward >= LINE_CLEAR_SCORE[4]:  # Line Clear 時
+                if reward >= LINE_CLEAR_SCORE[4]:
                     print("★★★★★★★★★★ 4 Line Clear! ★★★★★★★★★★")
                 elif reward >= LINE_CLEAR_SCORE[3]:
                     print("★★★★★★★★★★ 3 Line Clear! ★★★★★★★★★★")
@@ -183,12 +193,19 @@ class DQNTrainerController(Controller):
 
                 total_reward += reward
                 steps += 1
+            self.learn()
+            if episode % 10 == 0:
+                self.target_model.load_state_dict(self.model.state_dict())
             rewards.append(total_reward)
         return steps, rewards
 
-    def get_action(self, state: Tuple[np.ndarray, int, List[int], int]) -> Action:
+    def get_action(self, state, env) -> Action:
         if random.random() < self.epsilon:
-            return random.choice(list(self.actions))
+            possible_states = self.get_possible_actions(env)
+            possible_action_ids = [action.id for action, _ in possible_states]
+            action_id = random.choice(possible_action_ids)
+            res = self.action_map[action_id]
+            return res
         else:
             board, mino_id, next_mino_ids, hold_mino_id = state
             board = (
@@ -207,9 +224,17 @@ class DQNTrainerController(Controller):
             hold_mino_id = torch.tensor(
                 get_ordinary_tetris_mino_one_hot(hold_mino_id), dtype=torch.long
             ).to(self.device)
+            possible_states = self.get_possible_actions(env)
+            possible_action_ids = [action.id for action, _ in possible_states]
+            zeros = torch.zeros(self.action_size, dtype=torch.float32).to(self.device)
+            zeros[possible_action_ids] = 1
             q_values = self.model((board, mino_id, next_mino_ids, hold_mino_id))
+            min_q_values = torch.min(q_values)
+            q_values = q_values - min_q_values
+            q_values = q_values * zeros
             action_id = torch.argmax(q_values).item()
-            return self.action_map[action_id]
+            res = self.action_map[action_id]
+            return res
 
     def remember(
         self,
@@ -221,13 +246,11 @@ class DQNTrainerController(Controller):
     ) -> None:
         self.experience_buffer.add(Experience(state, action, reward, next_state, done))
 
-    def replay(self) -> None:
+    def learn(self) -> None:
         if self.experience_buffer.len() < 32:
             return
 
         experiences = self.experience_buffer.sample(32)
-
-        self.optimizer.zero_grad()
 
         # board情報は(10, 20)の2D情報
         # TorchはNCHW形式であるため、(バッチサイズ, チャンネル数, 高さ, 幅)の形式に変換する
@@ -256,9 +279,6 @@ class DQNTrainerController(Controller):
             [get_ordinary_tetris_mino_one_hot(exp.observe[3]) for exp in experiences],
             dtype=torch.long,
         ).to(self.device)
-
-        q_values = self.model((board, mino_id, next_mino_ids, hold_mino_id))
-        q_values = torch.max(q_values, dim=1).values
 
         next_board = (
             torch.tensor(
@@ -293,21 +313,35 @@ class DQNTrainerController(Controller):
             dtype=torch.long,
         ).to(self.device)
 
-        next_q_values = self.model(
+        self.model.train()
+        q_values = self.model((board, mino_id, next_mino_ids, hold_mino_id))
+        next_q_values = self.target_model(
             (next_board, next_mino_id, next_next_mino_ids, next_hold_mino_id)
         )
-
-        targets = []
+        next_q_values_max = torch.max(next_q_values, dim=1).values
+        target_values = []
         for i, exp in enumerate(experiences):
             if exp.done:
-                targets.append(exp.reward)
+                target_values.append(exp.reward)
             else:
-                targets.append(
-                    exp.reward + self.discount * torch.max(next_q_values[i]).item()
+                target_values.append(
+                    exp.reward + self.discount * next_q_values_max[i].item()
                 )
-
-        targets = torch.tensor(targets, dtype=torch.float32).to(self.device)
-        loss = nn.MSELoss()(q_values, targets)
+        target_values = torch.tensor(target_values, dtype=torch.float32).to(self.device)
+        zeros = torch.zeros(self.action_size, dtype=torch.float32).to(self.device)
+        zeros[torch.tensor([exp.action.id for exp in experiences])] = 1
+        q_values = q_values - torch.min(q_values)
+        q_values = q_values * zeros
+        q_values = torch.sum(q_values, dim=1)
+        loss = self.loss(q_values, target_values)
+        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+        self.losses.append(loss.item())
+        self.update_epsilon()
+
+    def update_epsilon(self) -> None:
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_min

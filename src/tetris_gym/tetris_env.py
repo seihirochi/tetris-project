@@ -110,7 +110,6 @@ class TetrisEnv(gym.Env):
                 movement_flug = self.tetris.place()
         elif self.action_mode == 1:
             y, rotate, hold_flag = action.convert_to_tuple(self.tetris.board.width)
-            print(f"y: {y}, rotate: {rotate}, hold: {hold_flag}")
             if hold_flag:
                 movement_flug = self.tetris.hold()
             else:

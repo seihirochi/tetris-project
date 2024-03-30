@@ -13,6 +13,7 @@ from .config import (
     TETRIS_WIDTH,
 )
 from .controller import HumanController
+import matplotlib.pyplot as plt
 
 
 def overwrite_print(text, line):
@@ -72,9 +73,9 @@ def train(device="cpu"):
         ALL_HARDDROP_ACTIONS,
         model,
         discount=1.00,
-        epsilon=1.00,
+        epsilon=0.5,
         epsilon_min=0.001,
-        epsilon_decay=0.999,
+        epsilon_decay=0.9999,
         device=device,
         mino_kinds=len(ORDINARY_TETRIS_MINOS),
     )
@@ -85,11 +86,22 @@ def train(device="cpu"):
     running = True
     total_games = 0
     total_steps = 0
+    each_rewards = []
     while running:
         steps, rewards = controller.train(env, episodes=20)
+        each_rewards.extend(rewards)
         total_games += len(rewards)
         total_steps += steps
         model.save()  # 途中経過を保存
+        plt.plot(each_rewards)
+        plt.title("Rewards")
+        plt.savefig("rewards.png")
+        plt.close()
+        plt.plot(controller.losses)
+        plt.yscale("log")
+        plt.title("Losses")
+        plt.savefig("losses.png")
+        plt.close()
 
         print(env.render())
         print("==================")
