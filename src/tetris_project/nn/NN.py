@@ -13,7 +13,7 @@ from tetris_gym import Action
 from tetris_gym.tetris import LINE_CLEAR_SCORE
 from tetris_project.controller import Controller
 
-WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "out.pth")
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "param/NN5.pth")
 
 
 class ExperienceBuffer:
