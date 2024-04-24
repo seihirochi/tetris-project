@@ -2,7 +2,7 @@ from statistics import mean, median
 
 import gymnasium as gym
 
-from .ai import NN, NNPlayerController, NNTrainerController, WEIGHT_OUT_PATH
+from .nn import NN, NNPlayerController, NNTrainerController, WEIGHT_OUT_PATH
 from .config import (
     ALL_HARDDROP_ACTIONS,
     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,

@@ -5,10 +5,9 @@ from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
-from gymnasium import Env
-
 import torch
 import torch.nn as nn
+from gymnasium import Env
 
 from tetris_gym import Action
 from tetris_gym.tetris import LINE_CLEAR_SCORE
