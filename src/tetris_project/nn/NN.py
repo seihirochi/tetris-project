@@ -33,18 +33,13 @@ class ExperienceBuffer:
         self.data_line_cnt = [0, 0, 0, 0, 0]
 
     def add(self, experience):
-        # Replay Buffer には (observe, action, reward, next_observe, done, clear_num) を追加
-        while len(self.buffer) >= self.buffer.maxlen:
-            # 先頭を取り出す
-            # _, _, reward, _, _, clear_num = self.buffer.popleft()
-            observe, action, reward, next_observe, done, clear_num = self.buffer.popleft()
-            self.data_line_cnt[lines_cleared(reward)] -= 1
+        # Buffer には (observe, action, reward, next_observe, done, rest_time, clear_lines) を追加
+        if len(self.buffer) >= self.buffer.maxlen:
+            observe, action, reward, next_observe, done, rest_time, clear_lines = self.buffer.popleft()
+            self.data_line_cnt[clear_lines] -= 1
 
-            if clear_num > 0:
-                self.buffer.append((observe, action, reward, next_observe, done, clear_num-1))
-                self.data_line_cnt[lines_cleared(reward)] += 1
         self.buffer.append(experience)
-        self.data_line_cnt[lines_cleared(experience[2])] += 1
+        self.data_line_cnt[experience[6]] += 1
 
     def sample(
         self, size: int
@@ -60,15 +55,17 @@ class NN(nn.Module):
     def __init__(self, input_size: int, output_size: int) -> None:
         super(NN, self).__init__()
         self.fc1 = nn.Linear(input_size, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 32)
-        self.fc4 = nn.Linear(32, output_size)
+        self.fc2 = nn.Linear(64, 256)
+        self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(128, 64)
+        self.fc5 = nn.Linear(64, output_size)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         x = torch.relu(self.fc3(x))
-        x = self.fc4(x)
+        x = torch.relu(self.fc4(x))
+        x = self.fc5(x)
         return x
 
     def save(self) -> None:
@@ -109,7 +106,7 @@ class NNTrainerController(Controller):
         if random.random() < self.epsilon:  # ε-greedy法
             return random.choice(possible_states)[0]
         else:  # 最適行動
-            states = [state for _, state in possible_states]
+            states = [state for _, state, _ in possible_states]
             states_tensor = torch.tensor(np.array(states)).float().to(self.device)
             rating = self.model(states_tensor)
             action = possible_states[rating.argmax().item()][0]
@@ -124,30 +121,38 @@ class NNTrainerController(Controller):
             state, _ = env.reset()
             done = False
             total_reward = 0
+            total_lines = 0
+
             while not done:
                 action = self.get_action(env)  # 行動を選択 (ε-greedy法)
                 next_state, reward, done, _, info = env.step(action)  # 行動を実行
-                if info["is_lower"]:
-                    self.lower_experience_buffer.add(
-                        (state, action, reward, next_state, done, lines_cleared(reward))
-                    )
-                else:
-                    self.upper_experience_buffer.add(
-                        (state, action, reward, next_state, done, lines_cleared(reward))
-                    )
 
-                if reward >= LINE_CLEAR_SCORE[4]:  # Line Clear 時
-                    print("★★★★★★★★★★ 4 Line Clear! ★★★★★★★★★★")
-                elif reward >= LINE_CLEAR_SCORE[3]:
-                    print("★★★★★★★★★★ 3 Line Clear! ★★★★★★★★★★")
-                elif reward >= LINE_CLEAR_SCORE[2]:
-                    print("★★★★★★★★★★ 2 Line Clear! ★★★★★★★★★★")
-                elif reward >= LINE_CLEAR_SCORE[1]:
-                    print("★★★★★★★★★★ 1 Line Clear! ★★★★★★★★★★")
+                clear_lines = lines_cleared(reward)
+                if clear_lines >= 1:  # Line Clear 時
+                    print(f"★★★★★★★★★★ {clear_lines} Line Clear! ★★★★★★★★★★")
+                    total_lines += clear_lines
+                
+                # 設置高によって報酬に倍率をかける (画面下部がより高い倍率)
+                h_rate = 1.0 - (env.unwrapped.tetris.pre_mino_state.origin[0]+1) / env.unwrapped.tetris.board.height
+                rate1 = -h_rate * 3.0 / 2.0 + 1.0
+                rate2 = -h_rate * 2.0 / 3.0 + 2.0 / 3.0
+                if h_rate <= 0.40:
+                    reward *= rate1
+                else:
+                    reward *= rate2
+
+                buffer_item = (state, action, reward, next_state, done, clear_lines, clear_lines)
+                if info["is_lower"]:
+                    self.lower_experience_buffer.add(buffer_item)
+                else:
+                    self.upper_experience_buffer.add(buffer_item)
 
                 state = next_state
                 total_reward += reward
                 steps += 1
+
+                if total_lines >= 30: # 30 Line 以上消したら break
+                    break
 
             rewards.append(total_reward)
             self.learn()
@@ -155,10 +160,10 @@ class NNTrainerController(Controller):
         return [steps, rewards]
 
     def learn(self, batch_size=128, epochs=8):
-        # 上下合わせて batch_size 個のデータを取得
+        # 上下合わせて batch_size 個のデータを取得 ( 上:下 = 1:2 )
         if (
-            self.lower_experience_buffer.len() < batch_size // 2
-            or self.upper_experience_buffer.len() < batch_size - batch_size // 2
+            self.lower_experience_buffer.len() < batch_size // 3 * 2
+            or self.upper_experience_buffer.len() < batch_size - batch_size // 3 * 2
         ):
             print("lower experience buffer size: ", self.lower_experience_buffer.len())
             print(
@@ -169,8 +174,8 @@ class NNTrainerController(Controller):
             return
 
         # 訓練データ
-        lower_batch = self.lower_experience_buffer.sample(batch_size // 2)
-        upper_batch = self.upper_experience_buffer.sample(batch_size - batch_size // 2)
+        lower_batch = self.lower_experience_buffer.sample(batch_size // 3 * 2)
+        upper_batch = self.upper_experience_buffer.sample(batch_size - batch_size // 3 * 2)
         all_batch = lower_batch + upper_batch
 
         # 現在と次の状態の Q(s, a) を纏めてバッチ処理して効率化
@@ -193,7 +198,7 @@ class NNTrainerController(Controller):
         )
 
         # Q(s, a) の更新
-        for i, (_, _, reward, _, done, _) in enumerate(all_batch):
+        for i, (_, _, reward, _, done, _, _) in enumerate(all_batch):
             targets[i] = reward
             if not done:
                 targets[i] += self.discount * next_targets[i]

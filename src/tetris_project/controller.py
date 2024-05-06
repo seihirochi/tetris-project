@@ -21,6 +21,9 @@ class Controller(ABC):
             # ※ 現時点では機械学習には用いていない
             pass
         elif env.unwrapped.action_mode == 1:
+            # 予備の行動
+            spare_action = None
+
             for action in self.actions:
                 y, rotate, hold = action.convert_to_tuple(
                     env.unwrapped.tetris.board.width
@@ -32,8 +35,14 @@ class Controller(ABC):
                     continue
                 tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                 flag = tetris_copy.move_and_rotate_and_drop(y, rotate)
-                if flag:
+
+                # 移動出来る & ゲームオーバーにならない場合
+                if flag and not tetris_copy.game_over:
                     actions.append((action, tetris_copy.observe()))
+                elif flag:
+                    spare_action = (action, tetris_copy.observe())
+            if len(actions) == 0:
+                actions.append(spare_action)
         return actions
 
     @abstractmethod

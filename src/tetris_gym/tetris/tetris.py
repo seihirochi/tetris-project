@@ -82,6 +82,7 @@ class Tetris:
         self.pre_mino_state = copy.deepcopy(
             self.current_mino_state
         )  # 直前の mino を保存
+
         if len(self.latest_clear_lines) > 0:
             self.latest_clear_mino_state = copy.deepcopy(
                 self.current_mino_state
@@ -135,7 +136,7 @@ class Tetris:
             [
                 [
                     self.get_hole_count(),
-                    self.get_above_block_squared_sum(),
+                    self.get_center_max_height(),
                     self.get_latest_clear_mino_heght(),
                     self.get_row_transitions(),
                     self.get_column_transitions(),
@@ -154,13 +155,9 @@ class Tetris:
             ]
         )
 
-    def get_above_block_squared_sum(self) -> int:
-        # ========== above_block_squared_sum ========== #
-        # 空マスで自身より上部にあるブロックの数の二乗和 ( ★自作特徴量★ )
-
-        # get_hole_count との差別化
-        # get_hole_count : 基本的に穴は無い方が良いという状態を表現
-        # above_block_squared_sum : 穴がある時に穴の上にブロックが無い方が復帰しやすいという状態を表現
+    def get_hole_count(self) -> int:
+        # ========== hole_count ========== #
+        # 空マスで自身より上部にあるブロックの総和
         res = 0
         for i in range(self.board.height):
             for j in range(self.board.width):
@@ -170,9 +167,22 @@ class Tetris:
                 for k in range(i - 1, -1, -1):
                     if self.board.board[k][j] != 0:
                         cnt += 1
-                res += cnt**2
+                res += (cnt > 0)
         return res
+    
+    def get_center_max_height(self) -> int:
+        # ========== center_max_height ========== #
+        # 中央 3 or 4 マス (奇数なら 3 マス, 偶数なら 4 マス) の最大の高さ
+        res = 0
+        left = (self.board.width+1) // 2 - 2
+        right = (self.board.width+1) // 2 + 2
 
+        for i in range(self.board.height):
+            for j in range(left, right):
+                if self.board.board[i][j] != 0:
+                    res = max(res, i)
+        return res
+    
     def get_latest_clear_mino_heght(self) -> int:
         # ========== latest_mino_heght ========== #
         # 直近の設置した mino の高さ
