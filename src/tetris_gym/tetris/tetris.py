@@ -173,23 +173,9 @@ class Tetris:
                 res += cnt**2
         return res
 
-    def get_hole_count(self) -> int:
-        # ========== hole_count ========== #
-        # 空マスで自身より上部のブロックマス総数
-        res = 0
-        for i in range(self.board.height):
-            for j in range(self.board.width):
-                if self.board.board[i][j] != 0:
-                    continue
-                for k in range(i - 1, -1, -1):
-                    if self.board.board[k][j] != 0:
-                        res += 1
-                        break
-        return res
-
     def get_latest_clear_mino_heght(self) -> int:
-        # ========== latest_clear_mino_heght ========== #
-        # 直近で Line 消しをしたミノの高さ
+        # ========== latest_mino_heght ========== #
+        # 直近の設置した mino の高さ
         if self.latest_clear_mino_state is None:
             return 0
         return self.board.height - self.latest_clear_mino_state.origin[0]

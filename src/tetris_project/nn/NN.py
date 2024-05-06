@@ -13,16 +13,38 @@ from tetris_gym import Action
 from tetris_gym.tetris import LINE_CLEAR_SCORE
 from tetris_project.controller import Controller
 
-WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "param/NN5.pth")
+WEIGHT_OUT_PATH = os.path.join(os.path.dirname(__file__), "out.pth")
 
+def lines_cleared(score):
+    if score >= 800:
+        return 4
+    elif score >= 500:
+        return 3
+    elif score >= 300:
+        return 2
+    elif score >= 100:
+        return 1
+    else:
+        return 0
 
 class ExperienceBuffer:
-    def __init__(self, buffer_size=20000):
+    def __init__(self, buffer_size=10000):
         self.buffer = deque(maxlen=buffer_size)
+        self.data_line_cnt = [0, 0, 0, 0, 0]
 
     def add(self, experience):
-        # Replay Buffer には (observe, action, reward, next_observe, done) を追加
+        # Replay Buffer には (observe, action, reward, next_observe, done, clear_num) を追加
+        while len(self.buffer) >= self.buffer.maxlen:
+            # 先頭を取り出す
+            # _, _, reward, _, _, clear_num = self.buffer.popleft()
+            observe, action, reward, next_observe, done, clear_num = self.buffer.popleft()
+            self.data_line_cnt[lines_cleared(reward)] -= 1
+
+            if clear_num > 0:
+                self.buffer.append((observe, action, reward, next_observe, done, clear_num-1))
+                self.data_line_cnt[lines_cleared(reward)] += 1
         self.buffer.append(experience)
+        self.data_line_cnt[lines_cleared(experience[2])] += 1
 
     def sample(
         self, size: int
@@ -107,11 +129,11 @@ class NNTrainerController(Controller):
                 next_state, reward, done, _, info = env.step(action)  # 行動を実行
                 if info["is_lower"]:
                     self.lower_experience_buffer.add(
-                        (state, action, reward, next_state, done)
+                        (state, action, reward, next_state, done, lines_cleared(reward))
                     )
                 else:
                     self.upper_experience_buffer.add(
-                        (state, action, reward, next_state, done)
+                        (state, action, reward, next_state, done, lines_cleared(reward))
                     )
 
                 if reward >= LINE_CLEAR_SCORE[4]:  # Line Clear 時
@@ -167,11 +189,11 @@ class NNTrainerController(Controller):
         idx = np.argmax([sample[2] for sample in all_batch])
         print(f"Immediate max reward in batch: {all_batch[idx][2]}")
         print(
-            f"Action max value for the first sample in batch: {targets[idx].item()}\n"
+            f"Action max value for the first sample in batch: {targets[idx].item()}"
         )
 
         # Q(s, a) の更新
-        for i, (_, _, reward, _, done) in enumerate(all_batch):
+        for i, (_, _, reward, _, done, _) in enumerate(all_batch):
             targets[i] = reward
             if not done:
                 targets[i] += self.discount * next_targets[i]
@@ -193,8 +215,12 @@ class NNTrainerController(Controller):
         # 学習後に再度 batch 内で最も高い報酬の期待値 Q(s, a) を表示 (確認用)
         targets = self.model(torch.tensor(states).float().to(self.device))
         print(
-            f"Action max value for the first sample in batch after learning: {targets[idx].item()}\n"
+            f"Action max value for the first sample in batch after learning: {targets[idx].item()}"
         )
+        # Buffer 内部のデータ内訳
+        print("Data line count (lower): ", self.lower_experience_buffer.data_line_cnt)
+        print("Data line count (upper): ", self.upper_experience_buffer.data_line_cnt)
+        print("\n")
 
         # 学習させる度に ε を減衰
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
