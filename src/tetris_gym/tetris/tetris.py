@@ -27,7 +27,7 @@ class Tetris:
             mino=Mino(0, np.array([[0]]), VOID_CHAR),
             height=height,
             width=width,
-            origin=(0, 0),
+            origin=(height-1, 0),
         )
 
         self.pre_mino_state = None

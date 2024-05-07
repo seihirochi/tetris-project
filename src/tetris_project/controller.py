@@ -13,7 +13,7 @@ class Controller(ABC):
         self.actions = actions
         self.action_map = {action.id: action for action in actions}
 
-    def get_possible_actions(self, env: Env) -> List[Tuple[Action, np.ndarray]]:
+    def get_possible_actions(self, env: Env) -> List[Tuple[Action, np.ndarray, int]]:
         # Env の情報を見て可能な行動を return (行動決定を controller に一任する)
         actions = []
         if env.unwrapped.action_mode == 0:
@@ -31,16 +31,17 @@ class Controller(ABC):
                 if hold:
                     tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                     if tetris_copy.hold():
-                        actions.append((action, tetris_copy.observe()))
+                        actions.append((action, tetris_copy.observe(), 0))
                     continue
+
                 tetris_copy = copy.deepcopy(env.unwrapped.tetris)
                 flag = tetris_copy.move_and_rotate_and_drop(y, rotate)
 
                 # 移動出来る & ゲームオーバーにならない場合
                 if flag and not tetris_copy.game_over:
-                    actions.append((action, tetris_copy.observe()))
+                    actions.append((action, tetris_copy.observe(), len(tetris_copy.latest_clear_lines)))
                 elif flag:
-                    spare_action = (action, tetris_copy.observe())
+                    spare_action = (action, tetris_copy.observe(), len(tetris_copy.latest_clear_lines))
             if len(actions) == 0:
                 actions.append(spare_action)
         return actions

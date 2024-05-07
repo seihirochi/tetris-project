@@ -2,16 +2,12 @@ from statistics import mean, median
 
 import gymnasium as gym
 
-from .nn import NN, NNPlayerController, NNTrainerController, WEIGHT_OUT_PATH
-from .config import (
-    ALL_HARDDROP_ACTIONS,
-    HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-    ORDINARY_TETRIS_ACTIONS,
-    ORDINARY_TETRIS_MINOS,
-    TETRIS_HEIGHT,
-    TETRIS_WIDTH,
-)
+from .config import (ALL_HARDDROP_ACTIONS,
+                     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
+                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS,
+                     TETRIS_HEIGHT, TETRIS_WIDTH)
 from .controller import HumanController
+from .nn import NN, WEIGHT_OUT_PATH, NNPlayerController, NNTrainerController
 
 
 def overwrite_print(text, line):
@@ -70,7 +66,7 @@ def train(device="cpu"):
         model,
         discount=0.995,
         epsilon=1.00,
-        epsilon_min=0.001,
+        epsilon_min=0.05,
         epsilon_decay=0.999,
         device=device,
     )

@@ -106,9 +106,27 @@ class NNTrainerController(Controller):
         if random.random() < self.epsilon:  # ε-greedy法
             return random.choice(possible_states)[0]
         else:  # 最適行動
+            
+            # 1. 3 Line 以上消せる遷移があったら問答無用でそれを選択
+            # 2. 直近で置いたミノが (height-6) / 2 + 6 より上なら、Line を消す遷移で最も期待値が高いものを選択
+            # ※ 2 で Line を消す遷移がなかった場合は他の遷移を選択
+
             states = [state for _, state, _ in possible_states]
             states_tensor = torch.tensor(np.array(states)).float().to(self.device)
             rating = self.model(states_tensor)
+            line_clear_action = []
+
+            for idx, (action, state, clear_lines) in enumerate(possible_states):
+                if clear_lines >= 3:
+                    return action
+                if clear_lines >= 1:
+                    line_clear_action.append(tuple([rating[idx].item(), action]))
+            
+            if len(line_clear_action) > 0 and env.unwrapped.tetris.board.height // 2 > env.unwrapped.tetris.pre_mino_state.origin[0]:
+                line_clear_action.sort(reverse=True)
+                _, action = line_clear_action[0]
+                return action
+
             action = possible_states[rating.argmax().item()][0]
             return action
 
@@ -238,8 +256,24 @@ class NNPlayerController(Controller):
 
     def get_action(self, env: Env) -> Action:
         possible_states = self.get_possible_actions(env)
-        # 状態から最適行動を選択
-        states = [state for _, state in possible_states]
+        # 1. 3 Line 以上消せる遷移があったら問答無用でそれを選択
+        # 2. 直近で置いたミノが (height-6) / 2 + 6 より上なら、Line を消す遷移で最も期待値が高いものを選択
+        # ※ 2 で Line を消す遷移がなかった場合は他の遷移を選択
+
+        states = [state for _, state, _ in possible_states]
         rating = self.model(torch.tensor(np.array(states)).float())
+        line_clear_action = []
+
+        for idx, (action, state, clear_lines) in enumerate(possible_states):
+            if clear_lines >= 3:
+                return action
+            if clear_lines >= 1:
+                line_clear_action.append(tuple([rating[idx].item(), action]))
+        
+        if len(line_clear_action) > 0 and env.unwrapped.tetris.board.height // 2 > env.unwrapped.tetris.pre_mino_state.origin[0]:
+            line_clear_action.sort(reverse=True)
+            _, action = line_clear_action[0]
+            return action
+
         action = possible_states[rating.argmax().item()][0]
         return action
