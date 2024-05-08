@@ -17,15 +17,15 @@ class Action:
 
     def __lt__(self, other) -> bool:
         return self.id < other.id
-    
+
     def __eq__(self, other) -> bool:
         return self.id == other.id
-    
+
     def __hash__(self) -> int:
         return hash(self.id)
-    
+
     def __str__(self) -> str:
         return f"Action(id={self.id}, name={self.name})"
-    
+
     def __repr__(self) -> str:
         return str(self)

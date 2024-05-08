@@ -37,9 +37,7 @@ class ExperienceBuffer:
     def add(self, experience):
         # Buffer には (observe, action, reward, next_observe, done, clear_lines) を追加
         if len(self.buffer) >= self.buffer.maxlen:
-            _, _, _, _, _, clear_lines = (
-                self.buffer.popleft()
-            )
+            _, _, _, _, _, clear_lines = self.buffer.popleft()
             self.data_line_cnt[clear_lines] -= 1
 
         self.buffer.append(experience)
@@ -110,7 +108,6 @@ class NNTrainerController(Controller):
         if random.random() < self.epsilon:  # ε-greedy法
             return random.choice(possible_states)[0]
         else:  # 最適行動
-            
             # 1. 3 Line 以上消せる遷移があったら問答無用でそれを選択
             # 2. 直近で置いたミノが (height-6) / 2 + 6 より上なら、Line を消す遷移で最も期待値が高いものを選択
             # ※ 2 で Line を消す遷移がなかった場合は他の遷移を選択
@@ -125,8 +122,12 @@ class NNTrainerController(Controller):
                     return action
                 if clear_lines >= 1:
                     line_clear_action.append(tuple([rating[idx].item(), action]))
-            
-            if len(line_clear_action) > 0 and env.unwrapped.tetris.board.height // 2 > env.unwrapped.tetris.pre_mino_state.origin[0]:
+
+            if (
+                len(line_clear_action) > 0
+                and env.unwrapped.tetris.board.height // 2
+                > env.unwrapped.tetris.pre_mino_state.origin[0]
+            ):
                 line_clear_action.sort(reverse=True)
                 _, action = line_clear_action[0]
                 return action
@@ -208,9 +209,7 @@ class NNTrainerController(Controller):
 
         # 訓練データ
         lower_batch = self.lower_experience_buffer.sample(batch_size // 2)
-        upper_batch = self.upper_experience_buffer.sample(
-            batch_size - batch_size // 2
-        )
+        upper_batch = self.upper_experience_buffer.sample(batch_size - batch_size // 2)
         all_batch = lower_batch + upper_batch
 
         # 現在と次の状態の Q(s, a) を纏めてバッチ処理して効率化
@@ -284,8 +283,12 @@ class NNPlayerController(Controller):
                 return action
             if clear_lines >= 1:
                 line_clear_action.append(tuple([rating[idx].item(), action]))
-        
-        if len(line_clear_action) > 0 and env.unwrapped.tetris.board.height // 2 > env.unwrapped.tetris.pre_mino_state.origin[0]:
+
+        if (
+            len(line_clear_action) > 0
+            and env.unwrapped.tetris.board.height // 2
+            > env.unwrapped.tetris.pre_mino_state.origin[0]
+        ):
             line_clear_action.sort(reverse=True)
             _, action = line_clear_action[0]
             return action

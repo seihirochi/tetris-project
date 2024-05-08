@@ -27,7 +27,7 @@ class Tetris:
             mino=Mino(0, np.array([[0]]), VOID_CHAR),
             height=height,
             width=width,
-            origin=(height-1, 0),
+            origin=(height - 1, 0),
         )
 
         self.pre_mino_state = MinoState(
@@ -171,9 +171,9 @@ class Tetris:
                 for k in range(i - 1, -1, -1):
                     if self.board.board[k][j] != 0:
                         cnt += 1
-                res += ( cnt > 0 )
+                res += cnt > 0
         return res
-    
+
     def get_above_block_squared_sum(self) -> int:
         # ========== above_block_squared_sum ========== #
         # 空マスで自身より上部にあるブロックの数の二乗和

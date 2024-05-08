@@ -39,9 +39,19 @@ class Controller(ABC):
 
                 # 移動出来る & ゲームオーバーにならない場合
                 if flag and not tetris_copy.game_over:
-                    actions.append((action, tetris_copy.observe(), len(tetris_copy.latest_clear_lines)))
+                    actions.append(
+                        (
+                            action,
+                            tetris_copy.observe(),
+                            len(tetris_copy.latest_clear_lines),
+                        )
+                    )
                 elif flag:
-                    spare_action = (action, tetris_copy.observe(), len(tetris_copy.latest_clear_lines))
+                    spare_action = (
+                        action,
+                        tetris_copy.observe(),
+                        len(tetris_copy.latest_clear_lines),
+                    )
             if len(actions) == 0:
                 actions.append(spare_action)
         return actions

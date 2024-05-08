@@ -4,10 +4,14 @@ import gymnasium as gym
 
 from tetris_gym.tetris import NEXT_MINO_NUM
 
-from .config import (ALL_HARDDROP_ACTIONS,
-                     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
-                     ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS,
-                     TETRIS_HEIGHT, TETRIS_WIDTH)
+from .config import (
+    ALL_HARDDROP_ACTIONS,
+    HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
+    ORDINARY_TETRIS_ACTIONS,
+    ORDINARY_TETRIS_MINOS,
+    TETRIS_HEIGHT,
+    TETRIS_WIDTH,
+)
 from .controller import HumanController
 from .nn import NN, WEIGHT_OUT_PATH, NNPlayerController, NNTrainerController
 

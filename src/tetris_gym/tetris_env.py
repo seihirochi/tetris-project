@@ -94,7 +94,9 @@ class TetrisEnv(gym.Env):
             self.tetris.pre_mino_state.origin[0]
             + self.tetris.pre_mino_state.mino.shape.shape[0]
         )
-        else_info = {"is_lower": ((self.tetris.board.height-6) // 2) + 6 <= mino_bottom_x}
+        else_info = {
+            "is_lower": ((self.tetris.board.height - 6) // 2) + 6 <= mino_bottom_x
+        }
 
         # tuple(観測情報, 報酬, ゲーム終了フラグ, その他)
         return (
