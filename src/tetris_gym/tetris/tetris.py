@@ -30,7 +30,12 @@ class Tetris:
             origin=(height-1, 0),
         )
 
-        self.pre_mino_state = None
+        self.pre_mino_state = MinoState(
+            mino=Mino(0, np.array([[0]]), VOID_CHAR),
+            height=height,
+            width=width,
+            origin=(0, 0),
+        )
         self.latest_clear_mino_state = None
         self.latest_clear_lines = 0
         self.line_total_count = 0
@@ -141,7 +146,6 @@ class Tetris:
                     self.get_row_transitions(),
                     self.get_column_transitions(),
                     self.get_bumpiness(),
-                    self.get_eroded_piece_cells(),
                     self.get_cumulative_wells(),
                     self.get_aggregate_height(),
                 ],
@@ -167,25 +171,40 @@ class Tetris:
                 for k in range(i - 1, -1, -1):
                     if self.board.board[k][j] != 0:
                         cnt += 1
-                res += (cnt > 0)
+                res += ( cnt > 0 )
         return res
     
+    def get_above_block_squared_sum(self) -> int:
+        # ========== above_block_squared_sum ========== #
+        # 空マスで自身より上部にあるブロックの数の二乗和
+        res = 0
+        for i in range(self.board.height):
+            for j in range(self.board.width):
+                if self.board.board[i][j] != 0:
+                    continue
+                cnt = 0
+                for k in range(i - 1, -1, -1):
+                    if self.board.board[k][j] != 0:
+                        cnt += 1
+                res += cnt**2
+        return res
+
     def get_center_max_height(self) -> int:
         # ========== center_max_height ========== #
         # 中央 3 or 4 マス (奇数なら 3 マス, 偶数なら 4 マス) の最大の高さ
         res = 0
-        left = (self.board.width+1) // 2 - 2
-        right = (self.board.width+1) // 2 + 2
+        left = (self.board.width + 1) // 2 - 2
+        right = (self.board.width + 1) // 2 + 2
 
         for i in range(self.board.height):
             for j in range(left, right):
                 if self.board.board[i][j] != 0:
                     res = max(res, i)
         return res
-    
+
     def get_latest_clear_mino_heght(self) -> int:
         # ========== latest_mino_heght ========== #
-        # 直近の設置した mino の高さ
+        # 直近で Line 消しをしたミノの高さ
         if self.latest_clear_mino_state is None:
             return 0
         return self.board.height - self.latest_clear_mino_state.origin[0]
@@ -253,23 +272,18 @@ class Tetris:
 
     def get_cumulative_wells(self) -> int:
         # ========== cumulatve_well ========== #
-        # 左右がブロックな空マスにおいて上に k 連続空マスが続く時
-        # well(i,j) = ∑_{i=1}^{k} i = k(k+1)/2
-        # cumulatve_well = ∑ well(i,j)
+        # 左右がブロックな空マスにおいて上に k 連続空マスが続く時の ∑ k(k+1)/2
         res = 0
+        continuous_empty = 0
         for j in range(self.board.width):
             for i in range(self.board.height - 1, -1, -1):
-                well_flag = self.board.board[i][j] == 0
-                well_flag &= j == 0 or self.board.board[i][j - 1] != 0
-                well_flag &= (
-                    j == self.board.width - 1 or self.board.board[i][j + 1] != 0
-                )
-                if well_flag:
-                    k = 0
-                    while i - k >= 0 and self.board.board[i - k][j] == 0:
-                        k += 1
-                    res += k * (k + 1) // 2
-                    i -= k
+                if self.board.board[i][j] != 0:
+                    res += continuous_empty * (continuous_empty + 1) // 2
+                    continuous_empty = 0
+                else:
+                    continuous_empty += 1
+            res += continuous_empty * (continuous_empty + 1) // 2
+            continuous_empty = 0
         return res
 
     def get_aggregate_height(self) -> int:

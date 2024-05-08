@@ -2,6 +2,8 @@ from statistics import mean, median
 
 import gymnasium as gym
 
+from tetris_gym.tetris import NEXT_MINO_NUM
+
 from .config import (ALL_HARDDROP_ACTIONS,
                      HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
                      ORDINARY_TETRIS_ACTIONS, ORDINARY_TETRIS_MINOS,
@@ -72,7 +74,7 @@ def train(device="cpu"):
     )
 
     # 既存の parametor を load する場合はファイル名指定
-    # model.load("out.pth")
+    # model.load(WEGHT_OUT_PATH)
 
     running = True
     total_games = 0
@@ -115,7 +117,7 @@ def simulate():
     controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model)
 
     # 既存の parametor を load する場合は param 配下のファイル名指定
-    model.load(WEIGHT_OUT_PATH)
+    model.load("param/NN6.pth")
 
     running = True
     while running:
