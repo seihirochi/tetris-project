@@ -138,4 +138,13 @@ def observe(self) -> np.ndarray:
 - Controller の処理で 3 Line 以上消せる状況が出来たら、溜めこまずに消す処理を追加。画面上部まで溜まっていたらそのボーダーを 2 Line まで下げる
 - 設置高によって報酬に倍率をかける（画面下部で安定して欲しいために下部に高倍率）
   - x を現在の設置高の割合とする
-  - **報酬倍率**: $ y = \begin{cases} -\frac{3}{2}x + 1.0 & \text{if } x \leq 0.4 \\ -\frac{2}{3}x + \frac{2}{3} & \text{else} \end{cases} $
+
+### 報酬倍率
+
+$$
+y =
+\begin{cases}
+  -\frac{3}{2}x + 1.0 & \text{if } x \leq 0.4 \\
+  -\frac{2}{3}x + \frac{2}{3} & \text{else}
+\end{cases}
+$$
