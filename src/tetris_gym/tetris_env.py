@@ -18,7 +18,7 @@ class TetrisEnv(gym.Env):
         self.action_mode = action_mode
 
         self.observation_space = gym.spaces.MultiDiscrete(
-            [999999999] * 9  # board の特徴量 (上限が不明)
+            [999999999] * 8  # board の特徴量 (上限が不明)
             + [len(minos) + 1]  # current mino
             + [len(minos) + 1] * NEXT_MINO_NUM  # next minos
             + [len(minos) + 1]  # hold mino
@@ -88,15 +88,15 @@ class TetrisEnv(gym.Env):
 
         # このターンで得た報酬
         reward = self.tetris.score - prev_score
-        if self.tetris.game_over:
-            reward = -1
 
         # 設置場所が半分より上か下か
         mino_bottom_x = (
             self.tetris.pre_mino_state.origin[0]
             + self.tetris.pre_mino_state.mino.shape.shape[0]
         )
-        else_info = {"is_lower": (self.tetris.board.height // 2) <= mino_bottom_x}
+        else_info = {
+            "is_lower": ((self.tetris.board.height - 6) // 2) + 6 <= mino_bottom_x
+        }
 
         # tuple(観測情報, 報酬, ゲーム終了フラグ, その他)
         return (

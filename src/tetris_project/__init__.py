@@ -2,7 +2,8 @@ from statistics import mean, median
 
 import gymnasium as gym
 
-from .ai import NN, NNPlayerController, NNTrainerController, WEIGHT_OUT_PATH
+from tetris_gym.tetris import NEXT_MINO_NUM
+
 from .config import (
     ALL_HARDDROP_ACTIONS,
     HUMAN_CONTROLLER_ORDINARY_TETRIS_ACTIONS_INPUT_MAP,
@@ -12,6 +13,7 @@ from .config import (
     TETRIS_WIDTH,
 )
 from .controller import HumanController
+from .nn import NN, WEIGHT_OUT_PATH, NNPlayerController, NNTrainerController
 
 
 def overwrite_print(text, line):
@@ -68,15 +70,15 @@ def train(device="cpu"):
     controller = NNTrainerController(
         ALL_HARDDROP_ACTIONS,
         model,
-        discount=1.00,
+        discount=0.995,
         epsilon=1.00,
-        epsilon_min=0.001,
+        epsilon_min=0.05,
         epsilon_decay=0.999,
         device=device,
     )
 
     # 既存の parametor を load する場合はファイル名指定
-    # model.load("param/NN4.weights.h5")
+    # model.load(WEGHT_OUT_PATH)
 
     running = True
     total_games = 0
@@ -119,7 +121,7 @@ def simulate():
     controller = NNPlayerController(ALL_HARDDROP_ACTIONS, model)
 
     # 既存の parametor を load する場合は param 配下のファイル名指定
-    model.load(WEIGHT_OUT_PATH)
+    model.load("param/NN6.pth")
 
     running = True
     while running:

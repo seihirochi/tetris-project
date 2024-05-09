@@ -104,10 +104,48 @@ def observe(self) -> np.ndarray:
 
 ## NN5
 
-- NN4 の parametor で火力の安定性を図るべく $\epsilon = 0.05$ から 1 episode Max 3000 点で Fine-tuning
+- Pytorch に移行
+- NN4 の parametor で火力の安定性を図るべく $\epsilon = 0.05$ から 1 episode Max 3000 点で Fine-turning
 - Model, parametor, input は NN2 と同じ
 
 ## NN6
 
-- Pytorch に移行
-- Model を Batch Fit から 1 Step Fit に変更 (torchの特性上)
+```python
+def observe(self) -> np.ndarray:
+    return np.concatenate(
+        [
+            [
+                self.get_hole_count(),
+                self.get_center_max_height(),
+                self.get_latest_clear_mino_heght(),
+                self.get_row_transitions(),
+                self.get_column_transitions(),
+                self.get_bumpiness(),
+                self.get_cumulative_wells(),
+                self.get_aggregate_height(),
+            ],
+            self.current_mino_state.mino.to_tensor().flatten(),
+            np.concatenate(
+                [mino.to_tensor().flatten() for mino in self.mino_permutation][:NEXT_MINO_NUM]
+            ),
+            self.hold_mino.mino.to_tensor().flatten(),
+        ]
+    )
+```
+
+- $Dense(64) \rightarrow Dense(256) \rightarrow Dense(128) \rightarrow Dense(64) \rightarrow Dense(output\_size)$
+  - 従来は 100,000 Line 程でゲームオーバーになることが多いため、もっと多くのパターンを表現出来るようにすべく大きくした
+- $\epsilon\_{start} = 1.0, \ discount = 0.99, \ \epsilon\_{min} = 0.05, \ \epsilon_{decay} = 0.995$
+- Controller の処理で 3 Line 以上消せる状況が出来たら、溜めこまずに消す処理を追加。画面上部まで溜まっていたらそのボーダーを 2 Line まで下げる
+- 設置高によって報酬に倍率をかける（画面下部で安定して欲しいために下部に高倍率）
+  - x を現在の設置高の割合とする
+
+### 報酬倍率
+
+$$
+y =
+\begin{cases}
+  -\frac{3}{2}x + 1.0 & \text{if } x \leq 0.4 \\
+  -\frac{2}{3}x + \frac{2}{3} & \text{else}
+\end{cases}
+$$
