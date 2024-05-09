@@ -134,6 +134,7 @@ def observe(self) -> np.ndarray:
 ```
 
 - $Dense(64) \rightarrow Dense(256) \rightarrow Dense(128) \rightarrow Dense(64) \rightarrow Dense(output\_size)$
+  - 従来は 100,000 Line 程でゲームオーバーになることが多いため、もっと多くのパターンを表現出来るようにすべく大きくした
 - $\epsilon\_{start} = 1.0, \ discount = 0.99, \ \epsilon\_{min} = 0.05, \ \epsilon_{decay} = 0.995$
 - Controller の処理で 3 Line 以上消せる状況が出来たら、溜めこまずに消す処理を追加。画面上部まで溜まっていたらそのボーダーを 2 Line まで下げる
 - 設置高によって報酬に倍率をかける（画面下部で安定して欲しいために下部に高倍率）
